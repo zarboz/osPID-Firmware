@@ -15,26 +15,6 @@ enum { firstDigitPosition = 4, lastDigitPosition = 8 };
 enum { MENU_FLAG_2x2_FORMAT = 0x01 };
 
   
-// print n blanks to LCD
-void  __attribute__ ((noinline)) LCDspc(byte n)
-{
-  for (byte i = n; i > 0; i--)
-    theLCD.print(' ');
-}
-
-// print text from PROGMEM to LCD and fill in with blanks to the end of the line 
-void __attribute__ ((noinline)) LCDprintln(const PROGMEM char* s)
-{
-  char c;
-  byte i = 16;
-  while ((c = (char) pgm_read_byte_near(s++)) && (i > 0))
-  {
-    theLCD.print(c);
-    i--;
-  }
-  LCDspc(i);
-}
-
 /*
  * This class encapsulates the PROGMEM tables which define the menu system.
  */
@@ -285,7 +265,7 @@ struct MenuStateData
 struct MenuStateData menuState;
 
 // print n blanks to LCD
-void  __attribute__ ((noinline)) LCDspc(byte n)
+void __attribute__ ((noinline)) LCDspc(byte n)
 {
   for (byte i = n; i > 0; i--)
     theLCD.print(' ');
@@ -490,7 +470,7 @@ static void __attribute__ ((noinline)) stopEditing()
 }
 
 // draw the selector character at the current position
-static void drawSelector(byte item, bool selected)
+static void __attribute__ ((noinline)) drawSelector(byte item, bool selected)
 {
   if (!selected)
   {
@@ -507,7 +487,7 @@ static void drawSelector(byte item, bool selected)
   }
 
   if (menuState.editing)
-    theLCD.print(canEdit ? '[' : '!');
+    theLCD.print(canEdit ? char(126) : '/'); // char(126) = arrow pointing right
   else
     theLCD.print(canEdit ? '>' : '|');
 }
@@ -551,12 +531,12 @@ static void drawFullRowItem(byte row, bool selected, byte item)
       spc--;
       break;
     case ITEM_WINDOW_LENGTH:
-      theLCD.print(F(" s "));
+      theLCD.print(F(" s"));
       break;
     case ITEM_OUTPUT:
-      theLCD.print(F(" % "));
+      theLCD.print(F(" %"));
     default:
-      spc++;
+      spc += 2;
     }
     LCDspc(spc);
   }
@@ -714,18 +694,16 @@ static void drawStatusFlash()
 // draw an item which takes up half a row (4 characters),
 // for 2x2 menu mode
 static void drawHalfRowItem(byte row, byte col, bool selected, byte item)
-{
-  theLCD.setCursor(col, row);
-
-  drawSelector(item, selected);
-
+{ 
   switch (item)
   {
-  theLCD.print(F("SP"));  
   case ITEM_SETPOINT1:
   case ITEM_SETPOINT2:
   case ITEM_SETPOINT3:
-  case ITEM_SETPOINT4:
+  case ITEM_SETPOINT4: 
+    theLCD.setCursor(col, row);
+    drawSelector(item, selected);
+    theLCD.print(F("SP")); 
     theLCD.print(char('1' + item - ITEM_SETPOINT1));
     break;
   default:
