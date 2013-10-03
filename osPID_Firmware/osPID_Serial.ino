@@ -120,18 +120,6 @@ or
 . Profiles _must_ be saved before they can be executed.
 */
 
-enum 
-{
-  SERIAL_SPEED_9p6k = 0,
-  SERIAL_SPEED_14p4k = 1,
-  SERIAL_SPEED_19p2k = 2,
-  SERIAL_SPEED_28p8k = 3,
-  SERIAL_SPEED_38p4k = 4,
-  SERIAL_SPEED_57p6k = 5,
-  SERIAL_SPEED_115k = 6
-};
-
-byte serialSpeed = SERIAL_SPEED_28p8k;
 
 // not static because called from elsewhere
 void setupSerial()
@@ -139,7 +127,7 @@ void setupSerial()
   ospAssert((serialSpeed >= 0) && (serialSpeed < 7));
 
   Serial.end();
-  unsigned int kbps = pgm_read_word_near(&serialSpeedTable[serialSpeed]);
+  unsigned int kbps = baudRate(serialSpeed);
   Serial.begin(kbps * 100);
 }
 
@@ -229,12 +217,13 @@ template<int D> static __attribute__ ((noinline)) ospDecimalValue<D> makeDecimal
 }
 
 // since the serial buffer is finite, we perform a realtime loop iteration
-// between each serial write
+// between each serial writes
 template<typename T> static void __attribute__((noinline)) serialPrint(T t)
 {
   Serial.print(t);
   realtimeLoop();
 }
+
 
 template<typename T> static void __attribute__((noinline)) serialPrintln(T t)
 {
@@ -312,7 +301,7 @@ static bool cmdSetSerialSpeed(const int& speed)
 {
   for (byte i = 0; i < (sizeof(serialSpeedTable) / sizeof(serialSpeedTable[0])); i++)
   {
-    unsigned int s = pgm_read_dword_near(&serialSpeedTable[i]);
+    unsigned int s = baudRate(i);
     if (s == speed)
     {
       // this is a speed we can do: report success, and then reset the serial
@@ -460,8 +449,7 @@ static void cmdExamineSettings()
   Serial.println();
 
   serialPrint(F("Comm speed (bps): "));
-  serialPrint(pgm_read_word_near(&serialSpeedTable[serialSpeed]));
-  serialPrintln("00");
+  serialPrint(baudRate(serialSpeed));
 
   serialPrint(F("Power-on: "));
   switch (powerOnBehavior)
@@ -695,7 +683,7 @@ static void processSerialCommand()
       serialPrintlnTemp(theInputDevice.getCalibration());
       break;
     case 'c':
-      serialPrint(pgm_read_word_near(&serialSpeedTable[serialSpeed]));
+      serialPrint(baudRate(serialSpeed));
       serialPrintln("00");
       break;
     case 'D':

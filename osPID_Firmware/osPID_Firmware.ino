@@ -5,7 +5,6 @@
 #include <avr/pgmspace.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "MyLiquidCrystal.h"
 #include "PID_v1_local.h"
 #include "PID_AutoTune_v0_local.h"
 #include "ospConfig.h"
@@ -62,7 +61,7 @@ ospSimulator theInputDevice;
 
 
 // we use the LiquidCrystal library to drive the LCD screen
-MyLiquidCrystal theLCD(lcdRsPin, lcdEnablePin, lcdD0Pin, lcdD1Pin, lcdD2Pin, lcdD3Pin);
+LiquidCrystal theLCD(lcdRsPin, lcdEnablePin, lcdD0Pin, lcdD1Pin, lcdD2Pin, lcdD3Pin);
 
 // our AnalogButton library provides debouncing and interpretation
 // of the analog-multiplexed button channel
@@ -163,8 +162,6 @@ extern void drawNotificationCursor(char icon);
 
 // some constants in flash memory, for reuse
 
-PROGMEM unsigned int serialSpeedTable[7] = { 96, 144, 192, 288, 384, 576, 1152 };
-
 #ifndef UNITS_FAHRENHEIT
 const __FlashStringHelper *FdegCelsius() { return F(" \272C"); }
 #else
@@ -172,6 +169,27 @@ const __FlashStringHelper *FdegFahrenheit() { return F(" \272F"); }
 #endif
 
 const PROGMEM char Pprofile[] = "Profile ";
+
+enum 
+{
+  SERIAL_SPEED_9p6k = 0,
+  SERIAL_SPEED_14p4k = 1,
+  SERIAL_SPEED_19p2k = 2,
+  SERIAL_SPEED_28p8k = 3,
+  SERIAL_SPEED_38p4k = 4,
+  SERIAL_SPEED_57p6k = 5,
+  SERIAL_SPEED_115k = 6
+};
+
+byte serialSpeed = SERIAL_SPEED_28p8k;
+
+PROGMEM unsigned int serialSpeedTable[7] = { 96, 144, 192, 288, 384, 576, 1152 };
+
+unsigned int __attribute__((noinline)) baudRate(byte i)
+{
+  return pgm_read_word_near(&serialSpeedTable[i]);
+}
+
 
 
 char hex(byte b)
