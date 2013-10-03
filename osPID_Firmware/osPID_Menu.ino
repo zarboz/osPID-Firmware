@@ -284,12 +284,32 @@ struct MenuStateData
 
 struct MenuStateData menuState;
 
-static void __attribute__ ((noinline)) setCursorTopLeft()
+// print n blanks to LCD
+void  __attribute__ ((noinline)) LCDspc(byte n)
+{
+  for (byte i = n; i > 0; i--)
+    theLCD.print(' ');
+}
+
+// print text from PROGMEM to LCD and fill in with blanks to the end of the line 
+void __attribute__ ((noinline)) LCDprintln(const PROGMEM char* s)
+{
+  char c;
+  byte i = 16;
+  while ((c = (char) pgm_read_byte_near(s++)) && (i > 0))
+  {
+    theLCD.print(c);
+    i--;
+  }
+  LCDspc(i);
+}
+
+static void __attribute__ ((noinline)) LCDsetCursorTopLeft()
 {
   theLCD.setCursor(0, 0);
 }
 
-static void __attribute__ ((noinline)) setCursorBottomLeft()
+static void __attribute__ ((noinline)) LCDsetCursorBottomLeft()
 {
   theLCD.setCursor(0, 1);
 }
@@ -299,9 +319,9 @@ static void drawStartupBanner()
 {
   // display a startup message
   theLCD.clear();
-  setCursorTopLeft();
+  LCDsetCursorTopLeft();
   LCDprintln(PcontrollerName);
-  setCursorBottomLeft();
+  LCDsetCursorBottomLeft();
   LCDprintln(Pversion);
 #ifndef SILENCE_BUZZER  
   buzzMillis(10);
@@ -312,7 +332,7 @@ static void drawStartupBanner()
 static void drawBadCsum(byte profile)
 {
   delay(500);
-  setCursorTopLeft();
+  LCDsetCursorTopLeft();
   if (profile == 0xFF)
     LCDprintln(PSTR("Settings"));
   else
@@ -321,7 +341,7 @@ static void drawBadCsum(byte profile)
     theLCD.setCursor(8, 0);
     theLCD.print(char(profile + '1'));
   }
-  setCursorBottomLeft();
+  LCDsetCursorBottomLeft();
   LCDprintln(PSTR("Cleared"));
   delay(2000);
 }
@@ -329,9 +349,9 @@ static void drawBadCsum(byte profile)
 // draw a banner reporting that we're resuming an interrupted profile
 static void drawResumeProfileBanner()
 {
-  setCursorTopLeft();
+  LCDsetCursorTopLeft();
   LCDprintln(PSTR("Resuming"));
-  setCursorBottomLeft();
+  LCDsetCursorBottomLeft();
   drawProfileName(activeProfileIndex);
   delay(1000);
 }
