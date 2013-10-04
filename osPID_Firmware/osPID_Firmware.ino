@@ -223,8 +223,7 @@ ISR (TIMER2_COMPA_vect)
   volatile byte *buzzerOut      = portOutputRegister(buzzerPort);
   const byte     buzzerBitMask  = digitalPinToBitMask(buzzerPin);
 
-  // 1 kHz tone
-  // buzz counts down every 0.25 ms
+  // buzz counts down 
   if (buzz == BUZZ_OFF)
   {
     // write buzzer pin low
@@ -232,9 +231,9 @@ ISR (TIMER2_COMPA_vect)
   }
   else
   {      
-    if (((unsigned int)buzz & 0x380) == 0) // intermittent beep
+    if (((unsigned int)buzz & 0x3F0) == 0) // intermittent chirp
     {
-      // toggle buzzer pin
+      // toggle buzzer pin to make tone
       *buzzerOut ^= buzzerBitMask;
     }
     else
@@ -255,11 +254,11 @@ void setup()
   // set up timer2 for buzzer interrupt
 #ifndef SILENCE_BUZZER
   cli();                   // disable interrupts
-  OCR2A = 124;             // set up timer2 CTC interrupts for buzzer every 250 us (gives 1 kHz tone)
+  OCR2A = 249;              // set up timer2 CTC interrupts for buzzer
   TCCR2A |= (1 << WGM21);  // CTC Mode
   TIMSK2 |= (1 << OCIE2A); // set interrupt on compare match
   GTCCR  |= (1 << PSRASY); // reset timer2 prescaler
-  TCCR2B |= (1 << CS22);   // prescale 64 (every 4 us @ 16 MHz)
+  TCCR2B |= (7 << CS20);   // prescaler 1024
   sei();                   // enable interrupts
 #endif  
 
@@ -574,13 +573,10 @@ void loop()
   {
     if (tripAutoReset)
     {
-      tripped = false;
-#ifndef SILENCE_BUZZER      
-      buzzOff;
-#endif      
+      tripped = false; 
     }
 
-    if (displayInput != (ospDecimalValue<1>){-19999} || (displayInput < lowerTripLimit) || (displayInput > upperTripLimit) || tripped)
+    if ((displayInput != (ospDecimalValue<1>){-19999}) && ((displayInput < lowerTripLimit) || (displayInput > upperTripLimit) || tripped))
     {
       output = 0;
       tripped = true;
@@ -589,6 +585,11 @@ void loop()
         buzzUntilCancel; // could get pretty annoying
 #endif      
     }
+
+#ifndef SILENCE_BUZZER      
+    if (!tripped)
+      buzzOff;
+#endif      
   }
 #ifndef SILENCE_BUZZER    
   else

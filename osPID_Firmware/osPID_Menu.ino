@@ -351,7 +351,7 @@ static void drawMenu()
       bool highlight = (i == menuState.highlightedItemMenuIndex);
       byte item = menuData[menuState.currentMenu].itemAt(i);
 
-      drawHalfRowItem(i / 2, 4 * (i & 1), highlight, item);
+      drawHalfRowItem(i / 2, 5 * (i & 1), highlight, item);
     }
   }
   else
@@ -519,6 +519,11 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     switch (item)
     { 
     case ITEM_SETPOINT:
+      if (tripped)
+      {
+        spc = 7;
+        break;
+      }
     case ITEM_INPUT:
     case ITEM_CALIBRATION:
     case ITEM_LOWER_TRIP_LIMIT:
@@ -536,7 +541,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     case ITEM_OUTPUT:
       theLCD.print(F(" %"));
     default:
-      spc += 2;
+      spc = 7;
     }
     LCDspc(spc);
   }
@@ -689,7 +694,7 @@ static void drawStatusFlash()
   }
   else
     ch = 0;
-  drawNotificationCursor(0);
+  drawNotificationCursor(ch);
 }
 
 // draw an item which takes up half a row (4 characters),
@@ -706,6 +711,7 @@ static void drawHalfRowItem(byte row, byte col, bool selected, byte item)
     drawSelector(item, selected);
     theLCD.print(F("SP")); 
     theLCD.print(char('1' + item - ITEM_SETPOINT1));
+    LCDspc(col == 0 ? 1 : 7);
     break;
   default:
     //BUGCHECK();
@@ -728,12 +734,12 @@ void __attribute__ ((noinline)) drawNotificationCursor(char icon)
       return;
 
     row = menuState.highlightedItemMenuIndex / 2;
-    col = 4 * (menuState.highlightedItemMenuIndex & 1);
+    col = 5 * (menuState.highlightedItemMenuIndex & 1);
   }
   else
   {
     row = (menuState.highlightedItemMenuIndex == menuState.firstItemMenuIndex) ? 0 : 1;
-    //col = 0; // initialized to 0 by C compiler
+    col = 0;
   }
 
   if (icon)
