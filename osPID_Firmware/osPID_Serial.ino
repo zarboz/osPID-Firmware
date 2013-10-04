@@ -124,7 +124,7 @@ or
 // not static because called from elsewhere
 void setupSerial()
 {
-  ospAssert((serialSpeed >= 0) && (serialSpeed < 7));
+  //ospAssert((serialSpeed >= 0) && (serialSpeed < 7));
 
   Serial.end();
   unsigned int kbps = baudRate(serialSpeed);

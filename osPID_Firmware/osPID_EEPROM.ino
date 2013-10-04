@@ -7,6 +7,7 @@
 #include "ospConfig.h"
 #include "ospIODevice.h"
 #include "ospSettingsHelper.h"
+#include "ospAssert.h"
 
 #undef BUGCHECK
 #define BUGCHECK() ospBugCheck(PSTR("EEPR"), __LINE__);
@@ -384,8 +385,8 @@ static char getProfileNameCharAt(byte profileIndex, byte i)
                         + PROFILE_NAME_OFFSET
                         + i;
   char ch;
-  ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
-  ospAssert((i >= 0) && (i < ospProfile::NAME_LENGTH+1));
+  //ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
+  //ospAssert((i >= 0) && (i < ospProfile::NAME_LENGTH+1));
   ospSettingsHelper::eepromRead(address, ch);
 
   return ch;
@@ -397,7 +398,7 @@ static void getProfileStepData(byte profileIndex, byte i, byte *type, unsigned l
                     + profileIndex * PROFILE_BLOCK_LENGTH;
 
 
-  ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
+  //ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
   ospSettingsHelper::eepromRead(base + PROFILE_STEP_TYPES_OFFSET + i, *type);
   *type &= ospProfile::STEP_CONTENT_MASK;
 

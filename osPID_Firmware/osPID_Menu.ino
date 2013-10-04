@@ -344,7 +344,7 @@ static void drawMenu()
   {
     // NOTE: right now the code only supports one screen (<= 4 items) in
     // 2x2 menu mode
-    ospAssert(itemCount <= 4);
+    //ospAssert(itemCount <= 4);
 
     for (byte i = 0; i < itemCount; i++) 
     {
@@ -358,7 +358,7 @@ static void drawMenu()
   {
     // 2x1 format; supports an arbitrary number of items in the menu
     bool highlightFirst = (menuState.highlightedItemMenuIndex == menuState.firstItemMenuIndex);
-    ospAssert(menuState.firstItemMenuIndex + 1 < itemCount);
+    //ospAssert(menuState.firstItemMenuIndex + 1 < itemCount);
 
     drawFullRowItem(0, highlightFirst, menuData[menuState.currentMenu].itemAt(menuState.firstItemMenuIndex));
     drawFullRowItem(1, !highlightFirst, menuData[menuState.currentMenu].itemAt(menuState.firstItemMenuIndex+1));
@@ -660,7 +660,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
 // flash a status indicator if appropriate
 static void drawStatusFlash()
 {
-  byte flashState = (( millis() & 0xC00 ) >> 10);
+  byte flashState = ((millis() & 0xC00) >> 10);
 
   char ch = 0;
   if (tripped && (flashState > 0))
@@ -720,7 +720,7 @@ void __attribute__ ((noinline)) drawNotificationCursor(char icon)
   byte row, col;
   if (menuData[menuState.currentMenu].is2x2())
   {
-    ospAssert(!menuState.editing);
+    //ospAssert(!menuState.editing);
 
     if (!icon)
       return;

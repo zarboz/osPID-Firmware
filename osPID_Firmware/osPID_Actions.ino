@@ -125,8 +125,8 @@ static void profileLoopIteration()
 {
   double delta;
   double target = double(profileState.targetSetpoint);
-  ospAssert(!tuning);
-  ospAssert(runningProfile);
+  //ospAssert(!tuning);
+  //ospAssert(runningProfile);
 
   long int stepTimeLeft = profileState.stepEndMillis - now;
   switch (profileState.stepType)
@@ -174,7 +174,7 @@ static void profileLoopIteration()
 
 static void startProfile()
 {
-  ospAssert(!runningProfile);
+  //ospAssert(!runningProfile);
 
   currentProfileStep = 0;
   recordProfileStart();
@@ -186,7 +186,7 @@ static void startProfile()
 
 static void stopProfile()
 {
-  ospAssert(runningProfile);
+  //ospAssert(runningProfile);
 #ifndef SILENCE_BUZZER
   buzzOff;
 #endif
