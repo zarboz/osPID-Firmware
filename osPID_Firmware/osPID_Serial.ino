@@ -784,7 +784,8 @@ static void processSerialCommand()
     // p now points to the #String
     break;
   default:
-    BUGCHECK();
+    //BUGCHECK();
+    ;
   }
 
   // perform bounds checking

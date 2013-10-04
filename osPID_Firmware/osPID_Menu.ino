@@ -652,7 +652,8 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     LCDprintln(PSTR("Yes"));
     break;
   default:
-    BUGCHECK();
+    //BUGCHECK();
+    ;
   }
 }
 
@@ -707,7 +708,8 @@ static void drawHalfRowItem(byte row, byte col, bool selected, byte item)
     theLCD.print(char('1' + item - ITEM_SETPOINT1));
     break;
   default:
-    BUGCHECK();
+    //BUGCHECK();
+    ;
   }
 }
 
@@ -806,7 +808,8 @@ static void backKeyPress()
     menuState.firstItemMenuIndex = menuState.highlightedItemMenuIndex - 1;
     break;
   default:
-    BUGCHECK();
+    //BUGCHECK();
+    ;
   }
 }
 
@@ -880,7 +883,8 @@ static void updownKeyPress(bool up)
       tripAutoReset = !tripAutoReset;
       break;
     default:
-      BUGCHECK();
+      //BUGCHECK();
+      ;
     }
     return;
   }
@@ -1089,7 +1093,8 @@ static void okKeyPress()
     ((VoidFn) 0x0000)();
     break;
   default:
-    BUGCHECK();
+    //BUGCHECK();
+    ;
   }
 }
 
