@@ -590,13 +590,14 @@ void loop()
     if (!tripped)
       buzzOff;
 #endif      
-  }
-#ifndef SILENCE_BUZZER    
+  }   
   else
   {
+    tripped= false;
+#ifndef SILENCE_BUZZER 
     buzzOff;
-  }
-#endif      
+#endif    
+  }  
 
   // after the realtime part comes the slow operations, which may re-enter
   // the realtime part of the loop but not the slow part

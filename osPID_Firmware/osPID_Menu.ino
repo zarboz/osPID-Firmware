@@ -10,7 +10,7 @@
 #define BUGCHECK() ospBugCheck(PSTR("MENU"), __LINE__);
 
 
-enum { firstDigitPosition = 4, lastDigitPosition = 8 };
+enum { firstDigitPosition = 6, lastDigitPosition = firstDigitPosition + 4 };
 
 enum { MENU_FLAG_2x2_FORMAT = 0x01 };
 
@@ -154,7 +154,7 @@ PROGMEM const MenuItem menuData[MENU_COUNT + 1] =
  */
 struct DecimalItem 
 {
-  char pmemIcon;
+  char pmemIcon[3];
   byte pmemFlags;
   void *pmemValPtr;
 
@@ -230,26 +230,21 @@ struct DecimalItem
   {
     return (int *)pgm_read_word_near(&pmemValPtr);
   }
-
-  char icon() const 
-  {
-    return pgm_read_byte_near(&pmemIcon);
-  }
 };
 
 // This must be in the same order as the ITEM_* enumeration
 PROGMEM DecimalItem decimalItemData[DECIMAL_ITEM_COUNT] =
 {
-  { 'S', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &displaySetpoint },
-  { 'I', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::NO_EDIT, &displayInput },
-  { 'O', DecimalItem::RANGE_0_1000      | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::EDIT_MANUAL_ONLY, &displayOutput },
-  { 'P', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &PGain },
-  { 'I', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &IGain },
-  { 'D', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &DGain },
-  { 'C', DecimalItem::RANGE_M999_P999   | DecimalItem::ONE_DECIMAL_PLACE, &displayCalibration },
-  { 'W', DecimalItem::RANGE_1_32767     | DecimalItem::ONE_DECIMAL_PLACE, &displayWindow },
-  { 'L', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &lowerTripLimit },
-  { 'U', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &upperTripLimit }
+  { 'S', 'v', ' ', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &displaySetpoint },
+  { 'P', 'v', ' ', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::NO_EDIT, &displayInput },
+  { 'O', 'u', 't', DecimalItem::RANGE_0_1000      | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::EDIT_MANUAL_ONLY, &displayOutput },
+  { 'P', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &PGain },
+  { 'I', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &IGain },
+  { 'D', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &DGain },
+  { 'C', 'a', 'l', DecimalItem::RANGE_M999_P999   | DecimalItem::ONE_DECIMAL_PLACE, &displayCalibration },
+  { 'C', 'y', 'c', DecimalItem::RANGE_1_32767     | DecimalItem::ONE_DECIMAL_PLACE, &displayWindow },
+  { 'M', 'i', 'n', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &lowerTripLimit },
+  { 'M', 'a', 'x', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &upperTripLimit }
 };
 
 struct MenuStateData 
@@ -416,34 +411,38 @@ static void drawDecimalValue(byte item)
   char buffer[lastDigitPosition + 1];
   memset(&buffer, ' ', lastDigitPosition + 1);
   byte itemIndex = item - FIRST_DECIMAL_ITEM;
-  char icon = decimalItemData[itemIndex].icon();
   int num = decimalItemData[itemIndex].currentValue();
   const byte decimals = decimalItemData[itemIndex].decimalPlaces();
 
+  PROGMEM const char *s = decimalItemData[itemIndex].pmemIcon;
+  for (byte i = 0; i < 3; i++ )
+  {
+    buffer[i] = (char) pgm_read_byte_near(s++);
+  }
   // flash "Trip" for the setpoint if the controller has hit a limit trip
   if (tripped && (item == ITEM_SETPOINT))
   {
-    theLCD.print(icon);
     if (now & 0x400)
-      theLCD.print(F("   Trip"));
-    else
-      LCDspc(7);
-    return;
+    {
+      strcpy_P(&buffer[firstDigitPosition], PSTR("Trip"));
+    }
   }
-  if ((num == -19999) && (item == ITEM_INPUT))
+  else if ((num == -19999) && (item == ITEM_INPUT))
   {
     // display an error
-    theLCD.print(icon);
     if (now & 0x400)
-      theLCD.print(F("    Err"));
-    else
-      LCDspc(7);
-    return;
+      strcpy_P(&buffer[firstDigitPosition + 1], PSTR("Err"));
   }
-
-  buffer[0] = icon;
-  formatDecimalValue(&buffer[2], num, decimals);
-  theLCD.print(buffer);
+  else
+  {
+    formatDecimalValue(&buffer[firstDigitPosition - 2], num, decimals);
+  }
+  char c;
+  for (byte i = 0; i < lastDigitPosition; i++ )
+  {
+    c = buffer[i];
+    theLCD.print((c == 0) ? ' ' : c);
+  }
 }
 
 // can a given item be edited
@@ -491,7 +490,7 @@ static void __attribute__ ((noinline)) drawSelector(byte item, bool selected)
   }
 
   if (menuState.editing)
-    theLCD.print(canEdit ? char(126) : '/'); // char(126) = arrow pointing right
+    theLCD.print(canEdit ? char(126) : 'X'); // char(126) = arrow pointing right
   else
     theLCD.print(canEdit ? '>' : '|');
 }
@@ -519,13 +518,13 @@ static void drawFullRowItem(byte row, bool selected, byte item)
   if ((item >= FIRST_DECIMAL_ITEM) && (item < FIRST_ACTION_ITEM))
   {
     drawDecimalValue(item);
-    byte spc = 5;
+    byte spc = 13 - lastDigitPosition;
     switch (item)
     { 
     case ITEM_SETPOINT:
       if (tripped)
       {
-        spc = 7;
+        spc = 15 - lastDigitPosition;
         break;
       }
     case ITEM_INPUT:
@@ -545,7 +544,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     case ITEM_OUTPUT:
       theLCD.print(F(" %"));
     default:
-      spc = 7;
+      spc = 15 - lastDigitPosition;
     }
     LCDspc(spc);
   }
@@ -574,7 +573,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     LCDprintln(PSTR("Alarm"));
     break;
   case ITEM_INPUT_MENU:
-    LCDprintln(PSTR("Input"));
+    LCDprintln(PSTR("Sensor"));
     break;
   case ITEM_RESET_ROM_MENU:
     LCDprintln(PSTR("Reset Memory"));
@@ -687,7 +686,7 @@ static void drawStatusFlash()
   {
     if ((flashState & 1) > 0) 
     {
-      ch = 't';
+      ch = 'T';
     }
   }
   else if (runningProfile && (flashState > 1))
@@ -716,7 +715,7 @@ static void drawHalfRowItem(byte row, byte col, bool selected, byte item)
   case ITEM_SETPOINT4: 
     theLCD.setCursor(col, row);
     drawSelector(item, selected);
-    theLCD.print(F("SP")); 
+    theLCD.print(F("Sv")); 
     theLCD.print(char('1' + item - ITEM_SETPOINT1));
     LCDspc(col == 0 ? 1 : 7);
     break;
@@ -725,7 +724,7 @@ static void drawHalfRowItem(byte row, byte col, bool selected, byte item)
     BUGCHECK();
 #else    
     ;
-#endif
+#endif  
   }
 }
 
