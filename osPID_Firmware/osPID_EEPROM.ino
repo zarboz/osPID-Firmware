@@ -385,8 +385,10 @@ static char getProfileNameCharAt(byte profileIndex, byte i)
                         + PROFILE_NAME_OFFSET
                         + i;
   char ch;
-  //ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
-  //ospAssert((i >= 0) && (i < ospProfile::NAME_LENGTH+1));
+#ifndef ATMEGA_32kB_FLASH
+  ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
+  ospAssert((i >= 0) && (i < ospProfile::NAME_LENGTH+1));
+#endif  
   ospSettingsHelper::eepromRead(address, ch);
 
   return ch;
@@ -398,7 +400,9 @@ static void getProfileStepData(byte profileIndex, byte i, byte *type, unsigned l
                     + profileIndex * PROFILE_BLOCK_LENGTH;
 
 
-  //ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
+#ifndef ATMEGA_32kB_FLASH
+  ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
+#endif  
   ospSettingsHelper::eepromRead(base + PROFILE_STEP_TYPES_OFFSET + i, *type);
   *type &= ospProfile::STEP_CONTENT_MASK;
 

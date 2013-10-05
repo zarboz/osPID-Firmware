@@ -344,7 +344,9 @@ static void drawMenu()
   {
     // NOTE: right now the code only supports one screen (<= 4 items) in
     // 2x2 menu mode
-    //ospAssert(itemCount <= 4);
+#ifndef ATMEGA_32kB_FLASH
+    ospAssert(itemCount <= 4);
+#endif
 
     for (byte i = 0; i < itemCount; i++) 
     {
@@ -358,7 +360,9 @@ static void drawMenu()
   {
     // 2x1 format; supports an arbitrary number of items in the menu
     bool highlightFirst = (menuState.highlightedItemMenuIndex == menuState.firstItemMenuIndex);
-    //ospAssert(menuState.firstItemMenuIndex + 1 < itemCount);
+#ifndef ATMEGA_32kB_FLASH
+    ospAssert(menuState.firstItemMenuIndex + 1 < itemCount);
+#endif
 
     drawFullRowItem(0, highlightFirst, menuData[menuState.currentMenu].itemAt(menuState.firstItemMenuIndex));
     drawFullRowItem(1, !highlightFirst, menuData[menuState.currentMenu].itemAt(menuState.firstItemMenuIndex+1));
@@ -657,8 +661,11 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     LCDprintln(PSTR("Yes"));
     break;
   default:
-    //BUGCHECK();
+#ifndef ATMEGA_32kB_FLASH
+    BUGCHECK();
+#else    
     ;
+#endif
   }
 }
 
@@ -714,8 +721,11 @@ static void drawHalfRowItem(byte row, byte col, bool selected, byte item)
     LCDspc(col == 0 ? 1 : 7);
     break;
   default:
-    //BUGCHECK();
+#ifndef ATMEGA_32kB_FLASH
+    BUGCHECK();
+#else    
     ;
+#endif
   }
 }
 
@@ -728,7 +738,9 @@ void __attribute__ ((noinline)) drawNotificationCursor(char icon)
   byte row, col;
   if (menuData[menuState.currentMenu].is2x2())
   {
-    //ospAssert(!menuState.editing);
+#ifndef ATMEGA_32kB_FLASH
+    ospAssert(!menuState.editing);
+#endif    
 
     if (!icon)
       return;
@@ -815,8 +827,11 @@ static void backKeyPress()
     menuState.firstItemMenuIndex = menuState.highlightedItemMenuIndex - 1;
     break;
   default:
-    //BUGCHECK();
+#ifndef ATMEGA_32kB_FLASH
+    BUGCHECK();
+#else    
     ;
+#endif    
   }
 }
 
@@ -890,8 +905,11 @@ static void updownKeyPress(bool up)
       tripAutoReset = !tripAutoReset;
       break;
     default:
-      //BUGCHECK();
-      ;
+#ifndef ATMEGA_32kB_FLASH
+    BUGCHECK();
+#else    
+    ;
+#endif
     }
     return;
   }
@@ -1100,8 +1118,11 @@ static void okKeyPress()
     ((VoidFn) 0x0000)();
     break;
   default:
-    //BUGCHECK();
+#ifndef ATMEGA_32kB_FLASH
+    BUGCHECK();
+#else    
     ;
+#endif
   }
 }
 

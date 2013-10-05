@@ -125,8 +125,10 @@ static void profileLoopIteration()
 {
   double delta;
   double target = double(profileState.targetSetpoint);
-  //ospAssert(!tuning);
-  //ospAssert(runningProfile);
+#ifndef ATMEGA_32kB_FLASH
+  ospAssert(!tuning);
+  ospAssert(runningProfile);
+#endif  
 
   long int stepTimeLeft = profileState.stepEndMillis - now;
   switch (profileState.stepType)
@@ -174,7 +176,9 @@ static void profileLoopIteration()
 
 static void startProfile()
 {
-  //ospAssert(!runningProfile);
+#ifndef ATMEGA_32kB_FLASH
+  ospAssert(!runningProfile);
+#endif  
 
   currentProfileStep = 0;
   recordProfileStart();
@@ -186,7 +190,9 @@ static void startProfile()
 
 static void stopProfile()
 {
-  //ospAssert(runningProfile);
+#ifndef ATMEGA_32kB_FLASH
+  ospAssert(runningProfile);
+#endif
 #ifndef SILENCE_BUZZER
   buzzOff;
 #endif

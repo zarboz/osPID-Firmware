@@ -124,7 +124,9 @@ or
 // not static because called from elsewhere
 void setupSerial()
 {
-  //ospAssert((serialSpeed >= 0) && (serialSpeed < 7));
+#ifndef ATMEGA_32kB_FLASH
+  ospAssert((serialSpeed >= 0) && (serialSpeed < 7));
+#endif  
 
   Serial.end();
   unsigned int kbps = baudRate(serialSpeed);
@@ -784,8 +786,11 @@ static void processSerialCommand()
     // p now points to the #String
     break;
   default:
-    //BUGCHECK();
+#ifndef ATMEGA_32kB_FLASH
+    BUGCHECK();
+#else    
     ;
+#endif
   }
 
   // perform bounds checking
