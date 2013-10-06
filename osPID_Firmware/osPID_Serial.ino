@@ -897,7 +897,7 @@ static void processSerialCommand()
   case 'M': // set the controller mode (PID or manual)
     modeIndex = i1;
     if (modeIndex == MANUAL)
-      output = manualOutput;
+      setOutputToManualOutput();
     myPID.SetMode(i1);
     break;
   case 'N': // clear and name the profile buffer

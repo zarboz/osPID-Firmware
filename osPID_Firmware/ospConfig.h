@@ -22,12 +22,6 @@ enum
   lcdD3Pin     = 4
 };
 
-// pin assignment for analogue buttons
-enum { buttonsPin = A4 };
-
-// pin assignment for buzzer
-enum { buzzerPin = A5 };
-
 // pin assignments for input devices 
 enum { thermistorPin  = A0 };
 enum { oneWireBus     = A0 };
@@ -38,6 +32,15 @@ enum
   thermocoupleCLK_Pin = A2 
 }; 
 
+// pin assignment for SSR output
+enum { SsrPin = A3 };
+
+// pin assignment for analogue buttons
+enum { buttonsPin = A4 };
+
+// pin assignment for buzzer
+enum { buzzerPin = A5 };
+
 // quiet mode (buzzer off) 
 #undef SILENCE_BUZZER
 
@@ -47,7 +50,7 @@ enum
 //    saved on the EEPROM -- set points, calibration values,
 //    trip limits, and profile settings -- will not be upated
 //    if this setting is changed.
-#define UNITS_FAHRENHEIT
+#undef UNITS_FAHRENHEIT
 
 // use simulator for input/output
 #undef USE_SIMULATOR

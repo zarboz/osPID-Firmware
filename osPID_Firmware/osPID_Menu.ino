@@ -166,7 +166,7 @@ struct DecimalItem
     RANGE_M9999_P9999 = 0,
     RANGE_0_1000 = 0x04,
     RANGE_0_32767 = 0x08,
-    RANGE_1_32767 = 0x10,
+    RANGE_10_32767 = 0x10,
     RANGE_M999_P999 = 0x20,
     NO_EDIT = 0x40,
     EDIT_MANUAL_ONLY = 0x80
@@ -190,8 +190,8 @@ struct DecimalItem
   int minimumValue() const 
   {
     byte f = flags();
-    if (f & RANGE_1_32767)
-      return 1;
+    if (f & RANGE_10_32767)
+      return 10;
     if (f & (RANGE_0_1000 | RANGE_0_32767))
       return 0;
     if (f & RANGE_M999_P999)
@@ -206,7 +206,7 @@ struct DecimalItem
       return 999;
     if (f & RANGE_0_1000)
       return 1000;
-    if (f & (RANGE_0_32767 | RANGE_1_32767))
+    if (f & (RANGE_0_32767 | RANGE_10_32767))
       return 32767;
     return 9999;
   }
@@ -242,7 +242,7 @@ PROGMEM DecimalItem decimalItemData[DECIMAL_ITEM_COUNT] =
   { 'I', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &IGain },
   { 'D', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &DGain },
   { 'C', 'a', 'l', DecimalItem::RANGE_M999_P999   | DecimalItem::ONE_DECIMAL_PLACE, &displayCalibration },
-  { 'C', 'y', 'c', DecimalItem::RANGE_1_32767     | DecimalItem::ONE_DECIMAL_PLACE, &displayWindow },
+  { 'C', 'y', 'c', DecimalItem::RANGE_10_32767    | DecimalItem::ONE_DECIMAL_PLACE, &displayWindow },
   { 'M', 'i', 'n', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &lowerTripLimit },
   { 'M', 'a', 'x', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &upperTripLimit }
 };
@@ -424,7 +424,7 @@ static void drawDecimalValue(byte item)
   {
     if (now & 0x400)
     {
-      strcpy_P(&buffer[firstDigitPosition], PSTR("Trip"));
+      strcpy_P(&buffer[firstDigitPosition - 1], PSTR("Alarm"));
     }
   }
   else if ((num == -19999) && (item == ITEM_INPUT))
@@ -890,7 +890,7 @@ static void updownKeyPress(bool up)
       modeIndex ^= 1; //= (modeIndex == 0 ? 1 : 0);
       // use the manual output value
       if (modeIndex == MANUAL)
-        output = manualOutput;
+        setOutputToManualOutput();
       myPID.SetMode(modeIndex);
       break;
     case ITEM_PID_DIRECTION:
@@ -931,6 +931,11 @@ static void updownKeyPress(bool up)
 
   if (item == ITEM_SETPOINT)
     setPoints[setpointIndex] = displaySetpoint;
+    
+#ifndef USE_SIMULATOR
+  if (item == ITEM_WINDOW_LENGTH)
+    theOutputDevice.setOutputWindowSeconds(displayWindow);
+#endif    
 }
 
 static void okKeyPress()
@@ -968,11 +973,6 @@ static void okKeyPress()
       return;
     }
 
-    if (item == ITEM_DASHBOARD_MENU)
-    {
-      displayWindow = theOutputDevice.getOutputWindowSeconds();
-    }
-
     // it's a menu: open that menu
     menuState.currentMenu = item;
     switch (item)
@@ -1006,7 +1006,7 @@ static void okKeyPress()
     if (tripped && (item == ITEM_SETPOINT))
     {
       tripped = false;
-      output = manualOutput;
+      setOutputToManualOutput();
 #ifndef SILENCE_BUZZER      
       buzzOff;
 #endif

@@ -57,7 +57,7 @@ static void stopAutoTune()
 
   // restore the output to the last manual command; it will be overwritten by the PID
   // if the loop is active
-  output = manualOutput;
+  setOutputToManualOutput();
   myPID.SetMode(modeIndex);
 }
 

@@ -115,7 +115,8 @@ double output = 0.0;
 double manualOutput = 0.0;
 
 // temporary fixed point decimal values for display and data entry
-ospDecimalValue<1> displaySetpoint = { 250 }, displayInput = { -19999 }, displayCalibration = { 0 }, displayOutput = { 0 }, displayWindow = { 50 }; 
+ospDecimalValue<1> displaySetpoint = { 250 }, displayInput = { -19999 }, displayCalibration = { 0 }, 
+  displayOutput = { 0 }, displayWindow = { 50 }; 
 
 // the hard trip limits
 #ifndef UNITS_FAHRENHEIT
@@ -248,9 +249,22 @@ ISR (TIMER2_COMPA_vect)
 }
 #endif
 
+void __attribute__((noinline)) setOutputToManualOutput()
+{
+  output = manualOutput;
+  displayOutput = makeDecimal<1>(output);
+}
+
 // initialize the controller: this is called by the Arduino runtime on bootup
 void setup()
 {
+  // initialize pins
+  for (byte pin = 8; pin < 13; pin++)
+  {
+    pinMode(pin, INPUT_PULLUP);
+  }
+  pinMode(buzzerPin, OUTPUT);
+  
   // set up timer2 for buzzer interrupt
 #ifndef SILENCE_BUZZER
   cli();                   // disable interrupts
@@ -296,7 +310,7 @@ void setup()
   if (powerOnBehavior == POWERON_DISABLE) 
   {
     modeIndex = MANUAL;
-    output = manualOutput;
+    setOutputToManualOutput();
   }
   myPID.SetMode(modeIndex);
 
@@ -465,7 +479,10 @@ static void markSettingsDirty()
 {
   // capture any possible changes to the output value if we're in MANUAL mode
   if (modeIndex == MANUAL && !tuning && !tripped)
-    manualOutput = displayOutput;
+  {
+    manualOutput = double(displayOutput);
+    output = manualOutput;
+  }
 
   // capture any changes to the setpoint
   activeSetPoint = double(setPoints[setpointIndex]);
@@ -528,11 +545,11 @@ void loop()
   // EEPROM writes or serial I/O
   updateTimer();
 
-  // highest priority task is to update the output
+  // highest priority task is to update the SSR output
   theOutputDevice.setOutputPercent(output);
 
   // read input, if it is ready
-  if (theInputDevice.getInitializationStatus() && after(readInputTime))
+  if (/*theInputDevice.getInitializationStatus() && after(readInputTime)*/1)
   {
     input = theInputDevice.readInput();
     if (!isnan(input))
@@ -555,6 +572,8 @@ void loop()
       tuning = false;
       completeAutoTune();
     }
+    // update the displayed output
+    displayOutput = makeDecimal<1>(output);
   }
   else
   {
@@ -565,8 +584,12 @@ void loop()
       profileLoopIteration();
 
     // update the PID
-    myPID.Compute();
-  }
+    myPID.Compute();  
+    // update the displayed output
+    // unless in manual mode, in which case the displayOutput may have changed
+    if (modeIndex !=MANUAL)
+      displayOutput = makeDecimal<1>(output);
+  }  
 
   // after the PID has updated, check the trip limits
   if (tripLimitsEnabled)
@@ -578,7 +601,8 @@ void loop()
 
     if ((displayInput != (ospDecimalValue<1>){-19999}) && ((displayInput < lowerTripLimit) || (displayInput > upperTripLimit) || tripped))
     {
-      output = 0;
+      output = 0.0;
+      displayOutput = (ospDecimalValue<1>){0};
       tripped = true;
 #ifndef SILENCE_BUZZER  
       if (buzz >= BUZZ_OFF)

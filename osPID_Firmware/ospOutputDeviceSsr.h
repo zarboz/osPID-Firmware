@@ -14,7 +14,6 @@ class ospOutputDeviceSsr :
   public ospBaseOutputDevice 
 {
 private:
-  enum { SSRPin = A3 };
   
   ospDecimalValue<1> outputWindowSeconds;
   unsigned long outputWindowMilliseconds;
@@ -23,13 +22,14 @@ private:
 public:
   ospOutputDeviceSsr() : 
     ospBaseOutputDevice(), 
+    outputWindowSeconds((ospDecimalValue<1>){50}),
     outputWindowMilliseconds(5000) // 5s OK for SSR depending on the load, needs to be longer for electromechanical relay
   { 
   }
   
   void initialize() 
   {
-    pinMode(SSRPin, OUTPUT);
+    pinMode(SsrPin, OUTPUT);
   }
   
   ospDecimalValue<1> getOutputWindowSeconds()
@@ -39,8 +39,11 @@ public:
   
   void setOutputWindowSeconds(ospDecimalValue<1> newOutputWindowSeconds)
   {
-    outputWindowSeconds = newOutputWindowSeconds;
-    outputWindowMilliseconds = ((int)outputWindowSeconds) * 100;
+    if (newOutputWindowSeconds.rawValue() >= 10) // minimum output cycle length 1 second
+    {
+      outputWindowSeconds = newOutputWindowSeconds;
+      outputWindowMilliseconds = (unsigned long) outputWindowSeconds.rawValue() * 100;
+    }
   }  
 
   const __FlashStringHelper *IODeviceIdentifier() 
@@ -95,7 +98,7 @@ public:
   const __FlashStringHelper *describeFloatSetting(byte index) 
   {
     if (index == 0) 
-      return F("Output PWM cycle length in milliseconds");
+      return F("Output PWM cycle length in seconds");
     return NULL;
   }
 /*
@@ -108,19 +111,20 @@ public:
   // save and restore settings to/from EEPROM using the settings helper
   void saveSettings(ospSettingsHelper& settings) 
   {
-    settings.save(outputWindowMilliseconds);
+    settings.save(outputWindowSeconds);
   }
 
   void restoreSettings(ospSettingsHelper& settings) 
   {
-    settings.restore(outputWindowMilliseconds);
+    settings.restore(outputWindowSeconds);
+    this->setOutputWindowSeconds(outputWindowSeconds);
   }
 
   void setOutputPercent(double percent)
   {
     unsigned long wind = millis() % outputWindowMilliseconds;
     unsigned long oVal = (unsigned long)(percent * 0.01 * (double)outputWindowMilliseconds);
-    digitalWrite(SSRPin, (oVal > wind) ? HIGH : LOW);
+    digitalWrite(SsrPin, (oVal > wind) ? HIGH : LOW);
   }
 };
 

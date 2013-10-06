@@ -86,6 +86,10 @@ public:
         oneWireDevice.setWaitForConversion(false);
       }
     }
+    else if (inputType == INPUT_THERMISTOR)
+    {
+      pinMode(thermistorPin, INPUT);
+    }
     initializationStatus = true;
   }
   
