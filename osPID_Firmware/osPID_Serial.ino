@@ -917,8 +917,8 @@ static void processSerialCommand()
       if (tuning || runningProfile || modeIndex != MANUAL)
         goto out_EMOD;
 
-      manualOutput = double(o);
-      output = manualOutput;
+      manualOutput = o;
+      output = double(manualOutput);
     }
     break;
   case 'o': // set power-on behavior

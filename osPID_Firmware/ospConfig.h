@@ -50,7 +50,7 @@ enum { buzzerPin = A5 };
 //    saved on the EEPROM -- set points, calibration values,
 //    trip limits, and profile settings -- will not be upated
 //    if this setting is changed.
-#undef UNITS_FAHRENHEIT
+#define UNITS_FAHRENHEIT
 
 // use simulator for input/output
 #undef USE_SIMULATOR
@@ -62,5 +62,22 @@ enum { buzzerPin = A5 };
 #define ATMEGA_32kB_FLASH
 
 // for longest options, #undef USE_SIMULATOR and SHORTER, #define UNITS_FAHRENHEIT
+
+// how often to step the PID loop, in milliseconds: it is impractical to set this
+// to less than ~1000 (i.e. faster than 1 Hz), since (a) the input has up to 750 ms
+// of latency, and (b) the controller needs time to handle the LCD, EEPROM, and serial
+// I/O
+enum { PID_LOOP_SAMPLE_TIME = 1000 };
+
+// minimum refresh rate for input measurements
+// NB OneWire devices have a considerably longer latency than this
+enum { INPUT_MINIMUM_SAMPLE_TIME = 100 };
+
+// autorepeat constants, in milliseconds
+enum 
+{
+  AUTOREPEAT_DELAY  = 250,
+  AUTOREPEAT_PERIOD = 350
+};
 
 #endif

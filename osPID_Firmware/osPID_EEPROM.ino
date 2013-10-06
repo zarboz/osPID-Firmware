@@ -30,11 +30,11 @@
 *     18 |    2 | Autotune step parameter
 *     20 |    2 | Autotune noise parameter
 *     22 |    2 | Autotune look-back parameter
-*     24 |    4 | Manual output setting
-*     28 |    2 | Lower trip limit
-*     30 |    2 | Upper trip limit
-*     32 |    1 | EEPROM version identifier
-*     33 |   39 | (free)
+*     24 |    2 | Manual output setting
+*     26 |    2 | Lower trip limit
+*     28 |    2 | Upper trip limit
+*     30 |    1 | EEPROM version identifier
+*     31 |   41 | (free)
 *     72 |   64 | Input device setting space
 *    136 |   64 | Output device setting space
 *
@@ -89,10 +89,10 @@ enum
   SETTINGS_AT_NOISE_OFFSET = 20,
   SETTINGS_AT_LOOKBACK_OFFSET = 22,
   SETTINGS_OUTPUT_OFFSET = 24,
-  SETTINGS_LOWER_TRIP_OFFSET = 28,
-  SETTINGS_UPPER_TRIP_OFFSET = 30,
-  SETTINGS_VERSION_OFFSET = 32,
-  // free space from 33 to 71
+  SETTINGS_LOWER_TRIP_OFFSET = 26,
+  SETTINGS_UPPER_TRIP_OFFSET = 28,
+  SETTINGS_VERSION_OFFSET = 30,
+  // free space from 31 to 71
   INPUT_DEVICE_SETTINGS_OFFSET = 72,
   OUTPUT_DEVICE_SETTINGS_OFFSET = 168,
   SETTINGS_CRC_LENGTH = 198

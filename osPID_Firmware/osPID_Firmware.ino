@@ -92,10 +92,6 @@ ospDecimalValue<1> setPoints[4] = { { 250 }, { 650 }, { 1000 }, { 1250 } };
 ospDecimalValue<1> setPoints[4] = { { 800 }, { 1500 }, { 2120 }, { 2600 } };
 #endif
 
-
-
-
-
 // the most recent measured input value
 double input = NAN; 
 
@@ -106,13 +102,13 @@ double lastGoodInput = 25.0;
 byte setpointIndex = 0;
 
 // set value for PID controller
-double activeSetPoint = setPoints[setpointIndex];
+double activeSetPoint = double(setPoints[setpointIndex]);
 
 // the output duty cycle calculated by PID controller
 double output = 0.0;   
 
 // the manually-commanded output value
-double manualOutput = 0.0;
+ospDecimalValue<1> manualOutput = { 0 };
 
 // temporary fixed point decimal values for display and data entry
 ospDecimalValue<1> displaySetpoint = { 250 }, displayInput = { -19999 }, displayCalibration = { 0 }, 
@@ -152,12 +148,6 @@ PID myPID(&lastGoodInput, &output, &activeSetPoint, double(PGain), double(IGain)
 
 // timekeeping to schedule the various tasks in the main loop
 unsigned long now, lcdTime, readInputTime;
-
-// how often to step the PID loop, in milliseconds: it is impractical to set this
-// to less than ~1000 (i.e. faster than 1 Hz), since (a) the input has up to 750 ms
-// of latency, and (b) the controller needs time to handle the LCD, EEPROM, and serial
-// I/O
-enum { PID_LOOP_SAMPLE_TIME = 1000 };
 
 extern void drawNotificationCursor(char icon);
 
@@ -210,6 +200,9 @@ bool __attribute__ ((noinline)) after(unsigned long targetTime)
   return ((u & 0x80000000) > 0);
 }
 
+#define MINIMUM(a,b) (((a)<(b))?(a):(b))
+#define MAXIMUM(a,b) (((a)>(b))?(a):(b))
+
 #ifndef SILENCE_BUZZER
 // buzzer 
 volatile int buzz = 0; // countdown timer for intermittent buzzer
@@ -251,8 +244,8 @@ ISR (TIMER2_COMPA_vect)
 
 void __attribute__((noinline)) setOutputToManualOutput()
 {
-  output = manualOutput;
-  displayOutput = makeDecimal<1>(output);
+  output = double(manualOutput);
+  displayOutput = manualOutput;
 }
 
 // initialize the controller: this is called by the Arduino runtime on bootup
@@ -297,8 +290,8 @@ void setup()
   setupSerial();
 #endif
 
-  delay((millis() < now + 2000) ? (now + 2000 - millis()) : 10);
-
+  long int pause = now + 2000 - millis();
+  delay(MAXIMUM(pause, 10));
   updateTimer();
 
   // configure the PID loop
@@ -349,12 +342,6 @@ static void checkButtons()
 {
   byte button = theButtonReader.get();
   byte executeButton = BUTTON_NONE;
-
-  enum 
-  {
-    AUTOREPEAT_DELAY  = 250,
-    AUTOREPEAT_PERIOD = 350
-  };
 
   if (button != BUTTON_NONE)
   {
@@ -418,11 +405,8 @@ static void checkButtons()
     break;
 
   case BUTTON_UP:
-    updownKeyPress(true);
-    break;
-
   case BUTTON_DOWN:
-    updownKeyPress(false);
+    updownKeyPress(executeButton == BUTTON_UP);
     break;
 
   case BUTTON_OK:
@@ -480,8 +464,8 @@ static void markSettingsDirty()
   // capture any possible changes to the output value if we're in MANUAL mode
   if (modeIndex == MANUAL && !tuning && !tripped)
   {
-    manualOutput = double(displayOutput);
-    output = manualOutput;
+    manualOutput = displayOutput;
+    output = double(manualOutput);
   }
 
   // capture any changes to the setpoint
@@ -549,7 +533,7 @@ void loop()
   theOutputDevice.setOutputPercent(output);
 
   // read input, if it is ready
-  if (/*theInputDevice.getInitializationStatus() && after(readInputTime)*/1)
+  if (theInputDevice.getInitializationStatus() && after(readInputTime))
   {
     input = theInputDevice.readInput();
     if (!isnan(input))
@@ -561,6 +545,7 @@ void loop()
     {
       displayInput = (ospDecimalValue<1>){-19999}; // display Err
     }
+    readInputTime += theInputDevice.requestInput();
   }
 
   if (tuning)
@@ -572,8 +557,6 @@ void loop()
       tuning = false;
       completeAutoTune();
     }
-    // update the displayed output
-    displayOutput = makeDecimal<1>(output);
   }
   else
   {
@@ -585,11 +568,11 @@ void loop()
 
     // update the PID
     myPID.Compute();  
-    // update the displayed output
-    // unless in manual mode, in which case the displayOutput may have changed
-    if (modeIndex !=MANUAL)
-      displayOutput = makeDecimal<1>(output);
   }  
+  // update the displayed output
+  // unless in manual mode, in which case the displayOutput may have changed
+  if (!tuning && (modeIndex != MANUAL))
+    displayOutput = makeDecimal<1>(output);
 
   // after the PID has updated, check the trip limits
   if (tripLimitsEnabled)

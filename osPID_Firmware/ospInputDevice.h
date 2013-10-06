@@ -207,7 +207,7 @@ public:
       oneWireDevice.requestTemperatures();
       return 750;
     }
-    return 0;
+    return INPUT_MINIMUM_SAMPLE_TIME;
   }
 
   double readInput()
