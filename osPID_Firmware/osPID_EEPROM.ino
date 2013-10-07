@@ -301,7 +301,11 @@ static void restoreEEPROMSettings()
 
   settings.restore(PGain);
   settings.restore(IGain);
+#ifdef PI_CONTROLLER
+  DGain =makeDecimal<3>(0.0);
+#else // PID controller  
   settings.restore(DGain);
+#endif  
 
   for (byte i = 0; i < NR_SETPOINTS; i++)
     settings.restore(setPoints[i]);

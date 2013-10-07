@@ -845,11 +845,15 @@ static void processSerialCommand()
       return;
     goto out_EINV;
   case 'D': // set the D gain
+#ifdef PI_CONTROLLER
+    goto out_EMOD;
+#else // PID controller    
     if (tuning)
       goto out_EMOD;
     if (!trySetGain(&DGain, i1, d1))
       goto out_EINV;
     break;
+#endif
   case 'E': // execute a profile by name
     if (!cmdStartProfile(p))
       goto out_EINV;

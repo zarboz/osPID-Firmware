@@ -137,10 +137,11 @@ byte powerOnBehavior = POWERON_CONTINUE_LOOP;
 bool controllerIsBooting = true;
 
 // the parameters for the autotuner
+ospDecimalValue<1> aTuneStep = { 200 };
 #ifndef UNITS_FAHRENHEIT
-ospDecimalValue<1> aTuneStep = { 90 }, aTuneNoise = { 18 }; 
+ospDecimalValue<1> aTuneNoise = { 18 }; 
 #else // Celsius
-ospDecimalValue<1> aTuneStep = { 50 }, aTuneNoise = { 10 }; 
+ospDecimalValue<1> aTuneNoise = { 10 }; 
 #endif
 int aTuneLookBack = 10; // units for this parameter is seconds
 PID_ATune aTune(&lastGoodInput, &output);
@@ -425,7 +426,11 @@ static void completeAutoTune()
   // We're done, set the tuning parameters
   PGain = makeDecimal<3>(aTune.GetKp());
   IGain = makeDecimal<3>(aTune.GetKi());
+#ifdef PI_CONTROLLER  
+  DGain = makeDecimal<3>(0.0);
+#else // PID controller  
   DGain = makeDecimal<3>(aTune.GetKd());
+#endif  
 
   // set the PID controller to accept the new gain settings
   // use whatever direction of control is currently set
@@ -576,7 +581,7 @@ void loop()
   }  
   // update the displayed output
   // unless in manual mode, in which case the displayOutput may have changed
-  if (!tuning && (modeIndex != MANUAL))
+  if (tuning || (modeIndex != MANUAL))
     displayOutput = makeDecimal<1>(output);
 
   // after the PID has updated, check the trip limits
