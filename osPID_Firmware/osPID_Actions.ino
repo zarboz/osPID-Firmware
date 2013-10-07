@@ -40,10 +40,14 @@ byte ATuneModeRemember;
 static void startAutoTune()
 {
   ATuneModeRemember = myPID.GetMode();
+  
+  // step value, avoiding output limits 
+  ospDecimalValue<1> o = makeDecimal<1>(output);
+  o = (o < ospDecimalValue<1>{ 500 }) ? o : ospDecimalValue<1>{ 1000 } - o; 
+  aTune.SetOutputStep(double(MINIMUM(aTuneStep, o)));
+ 
   myPID.SetMode(MANUAL);
-
   aTune.SetNoiseBand(double(aTuneNoise));
-  aTune.SetOutputStep(double(aTuneStep));
   aTune.SetLookbackSec(aTuneLookBack);
 #ifdef PI_CONTROLLER    
   aTune.SetControlType(0); // the default

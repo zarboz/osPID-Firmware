@@ -54,7 +54,9 @@ enum
   ITEM_TRIP_MENU,
   ITEM_INPUT_MENU,
   ITEM_POWERON_MENU,
+#ifndef STANDALONE_CONTROLLER  
   ITEM_COMM_MENU,
+#endif  
   ITEM_RESET_ROM_MENU,
 
   // then decimal items
@@ -116,8 +118,13 @@ enum
 
 PROGMEM const byte mainMenuItems[4] = { ITEM_DASHBOARD_MENU, ITEM_PROFILE_MENU, ITEM_CONFIG_MENU, ITEM_AUTOTUNE_CMD };
 PROGMEM const byte dashMenuItems[4] = { ITEM_SETPOINT, ITEM_INPUT, ITEM_OUTPUT, ITEM_PID_MODE };
+#ifdef STANDALONE_CONTROLLER
+PROGMEM const byte configMenuItems[10] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_TRIP_MENU, ITEM_INPUT_MENU, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, 
+  ITEM_POWERON_MENU, ITEM_COMM_MENU, ITEM_RESET_ROM_MENU };
+#else
 PROGMEM const byte configMenuItems[11] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_TRIP_MENU, ITEM_INPUT_MENU, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, 
   ITEM_POWERON_MENU, ITEM_COMM_MENU, ITEM_RESET_ROM_MENU };
+#endif  
 PROGMEM const byte profileMenuItems[3] = { ITEM_PROFILE1, ITEM_PROFILE2, ITEM_PROFILE3 };
 PROGMEM const byte setpointMenuItems[4] = { ITEM_SETPOINT1, ITEM_SETPOINT2, ITEM_SETPOINT3, ITEM_SETPOINT4 };
 #ifndef USE_SIMULATOR
@@ -125,8 +132,10 @@ PROGMEM const byte inputMenuItems[3] = { ITEM_INPUT_THERMISTOR, ITEM_INPUT_ONEWI
 #else
 PROGMEM const byte inputMenuItems[1] = { ITEM_SIMULATOR };
 #endif
+#ifndef STANDALONE_CONTROLLER
 PROGMEM const byte commMenuItems[7] = { ITEM_COMM_9p6k, ITEM_COMM_14p4k, ITEM_COMM_19p2k, ITEM_COMM_28p8k,
   ITEM_COMM_38p4k, ITEM_COMM_57p6k, ITEM_COMM_115k };
+#endif  
 PROGMEM const byte poweronMenuItems[3] = { ITEM_POWERON_DISABLE, ITEM_POWERON_CONTINUE, ITEM_POWERON_RESUME_PROFILE };
 PROGMEM const byte tripMenuItems[4] = { ITEM_TRIP_ENABLED, ITEM_LOWER_TRIP_LIMIT, ITEM_UPPER_TRIP_LIMIT, ITEM_TRIP_AUTORESET };
 PROGMEM const byte resetRomMenuItems[2] = { ITEM_RESET_ROM_NO, ITEM_RESET_ROM_YES };
@@ -237,7 +246,7 @@ PROGMEM DecimalItem decimalItemData[DECIMAL_ITEM_COUNT] =
 {
   { 'S', 'v', ' ', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &displaySetpoint },
   { 'P', 'v', ' ', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::NO_EDIT, &displayInput },
-  { 'O', 'u', 't', DecimalItem::RANGE_0_1000      | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::EDIT_MANUAL_ONLY, &displayOutput },
+  { 'O', 'u', 't', DecimalItem::RANGE_0_1000      | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::EDIT_MANUAL_ONLY, &manualOutput },
   { 'P', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &PGain },
   { 'I', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &IGain },
 #ifdef PI_CONTROLLER  
@@ -567,9 +576,11 @@ static void drawFullRowItem(byte row, bool selected, byte item)
       drawProfileName(activeProfileIndex);
     break;
     // case ITEM_SETPOINT_MENU: should not happen
+#ifndef STANDALONE_CONTROLLER   
   case ITEM_COMM_MENU:
     LCDprintln(PSTR("Communication"));
     break;
+#endif    
   case ITEM_POWERON_MENU:
     LCDprintln(PSTR("Power On"));
     break;
@@ -624,6 +635,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     LCDprintln(PSTR("Simulation"));
     break;
 #endif    
+#ifndef STANDALONE_CONTROLLER
   case ITEM_COMM_9p6k:
   case ITEM_COMM_14p4k:
   case ITEM_COMM_19p2k:
@@ -636,6 +648,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     theLCD.print(F("00 baud"));
     LCDspc(6 + (item == ITEM_COMM_9p6k) - (item == ITEM_COMM_115k));
     break;
+#endif    
   case ITEM_POWERON_DISABLE:
     LCDprintln(PSTR("Disable"));
     break;
@@ -822,7 +835,9 @@ static void backKeyPress()
   case ITEM_TRIP_MENU:
   case ITEM_INPUT_MENU:
   case ITEM_POWERON_MENU:
+#ifndef STANDALONE_CONTROLLER  
   case ITEM_COMM_MENU:
+#endif  
   case ITEM_RESET_ROM_MENU:
     menuState.currentMenu = ITEM_CONFIG_MENU;
     menuState.highlightedItemMenuIndex = prevMenu - ITEM_TRIP_MENU + 
@@ -932,14 +947,25 @@ static void updownKeyPress(bool up)
   int *valPtr = decimalItemData[itemIndex].valuePtr();
   *valPtr = val + increment;
   decimalItemData[itemIndex].boundValue();
-
+  
+  // capture changes
   if (item == ITEM_SETPOINT)
-    setPoints[setpointIndex] = displaySetpoint;
-    
+  {
+    setPoints[setPointIndex] = displaySetpoint;
+    updateActiveSetPoint();
+  }
 #ifndef USE_SIMULATOR
   if (item == ITEM_WINDOW_LENGTH)
     theOutputDevice.setOutputWindowSeconds(displayWindow);
+  if (item == ITEM_CALIBRATION)
+    theInputDevice.setCalibration(displayCalibration);
 #endif    
+
+  // capture any possible changes to the output value if we're in MANUAL mode
+  if ((item == ITEM_OUTPUT) && (modeIndex == MANUAL) && !tuning && !tripped)
+  {
+    setOutputToManualOutput();
+  }
 }
 
 static void okKeyPress()
@@ -985,14 +1011,16 @@ static void okKeyPress()
       menuState.highlightedItemMenuIndex = activeProfileIndex;
       break;
     case ITEM_SETPOINT_MENU:
-      menuState.highlightedItemMenuIndex = setpointIndex;
+      menuState.highlightedItemMenuIndex = setPointIndex;
       break;
     case ITEM_INPUT_MENU:
       menuState.highlightedItemMenuIndex = inputType;
       break;
+#ifndef STANDALONE_CONTROLLER      
     case ITEM_COMM_MENU:
       menuState.highlightedItemMenuIndex = serialSpeed;
       break;
+#endif      
     case ITEM_POWERON_MENU:
       menuState.highlightedItemMenuIndex = powerOnBehavior;
       break;
@@ -1051,8 +1079,9 @@ static void okKeyPress()
   case ITEM_SETPOINT2:
   case ITEM_SETPOINT3:
   case ITEM_SETPOINT4:
-    setpointIndex = item - ITEM_SETPOINT1;
-    displaySetpoint = setPoints[setpointIndex];
+    setPointIndex = item - ITEM_SETPOINT1;
+    displaySetpoint = setPoints[setPointIndex];
+    updateActiveSetPoint();
     markSettingsDirty();
 
     // return to the prior menu
@@ -1083,6 +1112,7 @@ static void okKeyPress()
     backKeyPress();
     break;
 
+#ifndef STANDALONE_CONTROLLER
   case ITEM_COMM_9p6k:
   case ITEM_COMM_14p4k:
   case ITEM_COMM_19p2k:
@@ -1097,6 +1127,7 @@ static void okKeyPress()
     // return to the prior menu
     backKeyPress();
     break;
+#endif    
 
   case ITEM_POWERON_DISABLE:
   case ITEM_POWERON_CONTINUE:
@@ -1145,7 +1176,7 @@ static bool okKeyLongPress()
     // open the setpoint menu
     menuState.currentMenu = ITEM_SETPOINT_MENU;
     menuState.firstItemMenuIndex = 0;
-    menuState.highlightedItemMenuIndex = setpointIndex;
+    menuState.highlightedItemMenuIndex = setPointIndex;
   }
   else if (item == ITEM_PROFILE_MENU)
   {

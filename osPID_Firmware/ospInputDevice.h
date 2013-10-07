@@ -26,10 +26,10 @@ private:
     CALIBRATION_THERMISTOR = 0,
     CALIBRATION_ONEWIRE,
     CALIBRATION_THERMOCOUPLE,  
-    THERMISTORNOMINAL,
+    NOMINAL,
     BCOEFFICIENT,
-    TEMPERATURENOMINAL,
-    REFERENCE_RESISTANCE
+    TEMPERATURE,
+    REFERENCE
   };    
 
   bool initializationStatus;
@@ -44,14 +44,14 @@ private:
   // convert the thermistor voltage to a temperature
   double thermistorVoltageToTemperature(int voltage)
   {
-    double R = inputSetting[REFERENCE_RESISTANCE] / (1024.0/(double)voltage - 1);
+    double R = inputSetting[REFERENCE] / (1024.0/(double)voltage - 1);
     double steinhart;
-    steinhart = R / inputSetting[THERMISTORNOMINAL];                 // (R/Ro)
+    steinhart = R / inputSetting[NOMINAL];                           // (R/Ro)
     steinhart = log(steinhart);                                      // ln(R/Ro)
     steinhart /= inputSetting[BCOEFFICIENT];                         // 1/B * ln(R/Ro)
-    steinhart += 1.0 / (inputSetting[TEMPERATURENOMINAL] + 273.15);  // + (1/To)
+    steinhart += 1.0 / (inputSetting[TEMPERATURE] + 273.15);         // + (1/To)
     steinhart = 1.0 / steinhart;                                     // Invert
-    steinhart -= 273.15;                                             // convert to C
+    steinhart -= 273.15;                                             // convert to Celsius
     return steinhart;
   }
   
@@ -64,10 +64,10 @@ public:
     oneWireDevice(&oneWire),
     thermocouple(thermocoupleCLK_Pin, thermocoupleCS_Pin, thermocoupleSO_Pin)
   { 
-    inputSetting[THERMISTORNOMINAL]    = 10.0f;
-    inputSetting[BCOEFFICIENT]         = 1.0f;
-    inputSetting[TEMPERATURENOMINAL]   = 293.15;
-    inputSetting[REFERENCE_RESISTANCE] = 10.0f;
+    inputSetting[NOMINAL]       = THERMISTOR_NOMINAL_RESISTANCE;
+    inputSetting[BCOEFFICIENT]  = THERMISTOR_B_COEFFICIENT;
+    inputSetting[TEMPERATURE]   = THERMISTOR_TEMPERATURE_NOMINAL;
+    inputSetting[REFERENCE]     = THERMISTOR_REFERENCE_RESISTANCE;
   }
   
   void initialize() 

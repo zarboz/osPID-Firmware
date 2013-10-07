@@ -207,7 +207,7 @@ union SettingsByte1
     byte pidMode : 1;
     byte pidDirection : 1;
     byte powerOnBehavior : 2;
-    byte setpointIndex : 2;
+    byte setPointIndex : 2;
     byte tripLimitsEnabled : 1;
     byte tripAutoReset : 1;
   };
@@ -238,7 +238,7 @@ static void saveEEPROMSettings()
   sb1.pidMode = modeIndex;
   sb1.pidDirection = ctrlDirection;
   sb1.powerOnBehavior = powerOnBehavior;
-  sb1.setpointIndex = setpointIndex;
+  sb1.setPointIndex = setPointIndex;
   sb1.tripLimitsEnabled = tripLimitsEnabled;
   sb1.tripAutoReset = tripAutoReset;
   settings.save(sb1.byteVal);
@@ -290,7 +290,7 @@ static void restoreEEPROMSettings()
   modeIndex = sb1.pidMode;
   ctrlDirection = sb1.pidDirection;
   powerOnBehavior = sb1.powerOnBehavior;
-  setpointIndex = sb1.setpointIndex;
+  setPointIndex = sb1.setPointIndex;
   tripLimitsEnabled = sb1.tripLimitsEnabled;
   tripAutoReset = sb1.tripAutoReset;
 
@@ -309,7 +309,7 @@ static void restoreEEPROMSettings()
 
   for (byte i = 0; i < NR_SETPOINTS; i++)
     settings.restore(setPoints[i]);
-  activeSetPoint = double(setPoints[setpointIndex]);
+  updateActiveSetPoint();
   displaySetpoint = setPoints[0];
 
   settings.restore(aTuneStep);

@@ -429,7 +429,7 @@ static void cmdExamineSettings()
   // write out the setpoints, with a '*' next to the active one
   for (byte i = 0; i < 4; i++)
   {
-    if (i == setpointIndex)
+    if (i == setPointIndex)
       serialPrint('*');
     else
       serialPrint(' ');
@@ -723,7 +723,7 @@ static void processSerialCommand()
       serialPrintlnFloatTemp(activeSetPoint);
       break;
     case 's':
-      serialPrintln(setpointIndex);
+      serialPrintln(setPointIndex);
       break;
     case 'T':
       serialPrintln(tripped);
@@ -959,17 +959,17 @@ static void processSerialCommand()
     {
       if (tuning)
         goto out_EMOD;
-      if (!trySetTemp(&setPoints[setpointIndex], i1, d1))      
+      if (!trySetTemp(&setPoints[setPointIndex], i1, d1))      
         goto out_EINV;
-      activeSetPoint = double(setPoints[setpointIndex]);
+      updateActiveSetPoint();
     }
     break;
   case 's': // change the active setpoint
     if (i1 >= 4)
       goto out_EINV;
 
-    setpointIndex = i1;
-    activeSetPoint = double(setPoints[setpointIndex]);
+    setPointIndex = i1;
+    updateActiveSetPoint();
     break;
   case 'T': // clear a trip
     if (!tripped)

@@ -92,17 +92,17 @@ ospDecimalValue<1> setPoints[4] = { { 250 }, { 650 }, { 1000 }, { 1250 } };
 ospDecimalValue<1> setPoints[4] = { { 800 }, { 1500 }, { 2120 }, { 2600 } };
 #endif
 
+// the index of the selected setpoint
+byte setPointIndex = 0;
+
+// set value for PID controller
+double activeSetPoint;
+
 // the most recent measured input value
 double input = NAN; 
 
 // last good input value, used by PID controller
 double lastGoodInput = 25.0;
-
-// the index of the selected setpoint
-byte setpointIndex = 0;
-
-// set value for PID controller
-double activeSetPoint = double(setPoints[setpointIndex]);
 
 // the output duty cycle calculated by PID controller
 double output = 0.0;   
@@ -112,7 +112,7 @@ ospDecimalValue<1> manualOutput = { 0 };
 
 // temporary fixed point decimal values for display and data entry
 ospDecimalValue<1> displaySetpoint = { 250 }, displayInput = { -19999 }, displayCalibration = { 0 }, 
-  displayOutput = { 0 }, displayWindow = { 50 }; 
+  displayWindow = { 50 }; 
 
 // the hard trip limits
 #ifndef UNITS_FAHRENHEIT
@@ -178,6 +178,7 @@ enum
   SERIAL_SPEED_115k = 6
 };
 
+#ifndef STANDALONE_CONTROLLER
 byte serialSpeed = SERIAL_SPEED_28p8k;
 
 PROGMEM unsigned int serialSpeedTable[7] = { 96, 144, 192, 288, 384, 576, 1152 };
@@ -186,7 +187,7 @@ unsigned int __attribute__((noinline)) baudRate(byte i)
 {
   return pgm_read_word_near(&serialSpeedTable[i]);
 }
-
+#endif
 
 
 char hex(byte b)
@@ -251,8 +252,15 @@ ISR (TIMER2_COMPA_vect)
 void __attribute__((noinline)) setOutputToManualOutput()
 {
   output = double(manualOutput);
-  displayOutput = manualOutput;
 }
+
+void __attribute__((noinline)) updateActiveSetPoint()
+{
+  activeSetPoint = double(setPoints[setPointIndex]);
+}
+
+
+
 
 // initialize the controller: this is called by the Arduino runtime on bootup
 void setup()
@@ -292,7 +300,7 @@ void setup()
   theOutputDevice.initialize();
 
   // set up the serial interface
-#ifndef SHORTER
+#ifndef STANDALONE_CONTROLLER
   setupSerial();
 #endif
 
@@ -300,7 +308,8 @@ void setup()
   delay(MAXIMUM(pause, 10));
   updateTimer();
 
-  // configure the PID loop
+  // configure the PID loop 
+  updateActiveSetPoint();
   myPID.SetSampleTime(PID_LOOP_SAMPLE_TIME);
   myPID.SetOutputLimits(0, 100);
   myPID.SetTunings(double(PGain), double(IGain), double(DGain));
@@ -471,22 +480,6 @@ unsigned long settingsWritebackTime;
 // as soon as they are done changing
 static void markSettingsDirty()
 {
-  // capture any possible changes to the output value if we're in MANUAL mode
-  if (modeIndex == MANUAL && !tuning && !tripped)
-  {
-    manualOutput = displayOutput;
-    output = double(manualOutput);
-  }
-
-  // capture any changes to the setpoint
-  activeSetPoint = double(setPoints[setpointIndex]);
-
-  // capture any changes to the output window length
-  theOutputDevice.setOutputWindowSeconds(displayWindow);
-  
-  // capture any changes to the calibration value
-  theInputDevice.setCalibration(displayCalibration);
-
   settingsWritebackNeeded = true;
 
   // wait until nothing has changed for 5s before writing to EEPROM
@@ -529,9 +522,11 @@ void realtimeLoop()
   blockSlowOperations = false;
 }
 
+#ifndef STANDALONE_CONTROLLER
 // we accumulate characters for a single serial command in this buffer
 char serialCommandBuffer[33];
 byte serialCommandLength;
+#endif
 
 void loop()
 {
@@ -580,9 +575,9 @@ void loop()
     myPID.Compute();  
   }  
   // update the displayed output
-  // unless in manual mode, in which case the displayOutput may have changed
+  // unless in manual mode, in which case a new value may have been entered
   if (tuning || (modeIndex != MANUAL))
-    displayOutput = makeDecimal<1>(output);
+    manualOutput = makeDecimal<1>(output);
 
   // after the PID has updated, check the trip limits
   if (tripLimitsEnabled)
@@ -595,7 +590,7 @@ void loop()
     if ((displayInput != (ospDecimalValue<1>){-19999}) && ((displayInput < lowerTripLimit) || (displayInput > upperTripLimit) || tripped))
     {
       output = 0.0;
-      displayOutput = (ospDecimalValue<1>){0};
+      manualOutput = (ospDecimalValue<1>){0};
       tripped = true;
 #ifndef SILENCE_BUZZER  
       if (buzz >= BUZZ_OFF)
@@ -657,6 +652,7 @@ void loop()
     saveEEPROMSettings();
   }
 
+#ifndef STANDALONE_CONTROLLER
   // accept any pending characters from the serial buffer
   byte avail = Serial.available();
   while (avail--)
@@ -674,13 +670,12 @@ void loop()
       serialCommandBuffer[serialCommandLength] = '\0';
       drawNotificationCursor('*');
 
-#ifndef SHORTER
       processSerialCommand();
-#endif
-
+      
       serialCommandLength = 0;
     }
   }
+#endif
 }
 
 
