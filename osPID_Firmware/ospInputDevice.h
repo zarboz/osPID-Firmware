@@ -117,7 +117,7 @@ public:
   // read settings from the device
   double readFloatSetting(byte index) 
   {
-    if (index > 6 )
+    if (index > 6)
       return NULL;
     return inputSetting[index];
   }
@@ -125,7 +125,7 @@ public:
   // write settings to the device
   bool writeFloatSetting(byte index, double val) 
   {
-    if (index > 6 )
+    if (index > 6)
       return false;
     inputSetting[index] = val;
     return true;

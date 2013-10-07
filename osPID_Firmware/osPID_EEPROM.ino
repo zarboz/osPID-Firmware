@@ -223,7 +223,7 @@ union SettingsByte2
     byte serialSpeed : 3;
     byte activeProfileIndex : 2;
     byte inputType : 2;
-    byte spare : 1;
+    byte unitsFahrenheit : 1;
   };
   byte byteVal;
 };
@@ -247,6 +247,7 @@ static void saveEEPROMSettings()
   sb2.serialSpeed = serialSpeed;
   sb2.activeProfileIndex = activeProfileIndex;
   sb2.inputType = inputType;
+  sb2.unitsFahrenheit = unitsFahrenheit;
   settings.save(sb2.byteVal);
 
   settings.save(PGain);
@@ -286,6 +287,20 @@ static void restoreEEPROMSettings()
   SettingsByte2 sb2;
   ospSettingsHelper settings(CRC16_INIT, SETTINGS_SBYTE1_OFFSET);
 
+  // clear EEPROM if units have changed
+  settings.restore(sb2.byteVal);
+  if (unitsFahrenheit != sb2.unitsFahrenheit)
+  {
+    clearEEPROM();
+    saveEEPROMSettings();
+    return;
+  }
+
+  serialSpeed = sb2.serialSpeed;
+  activeProfileIndex = sb2.activeProfileIndex;
+  inputType = sb2.inputType;
+
+
   settings.restore(sb1.byteVal);
   modeIndex = sb1.pidMode;
   ctrlDirection = sb1.pidDirection;
@@ -293,11 +308,6 @@ static void restoreEEPROMSettings()
   setPointIndex = sb1.setPointIndex;
   tripLimitsEnabled = sb1.tripLimitsEnabled;
   tripAutoReset = sb1.tripAutoReset;
-
-  settings.restore(sb2.byteVal);
-  serialSpeed = sb2.serialSpeed;
-  activeProfileIndex = sb2.activeProfileIndex;
-  inputType = sb2.inputType;
 
   settings.restore(PGain);
   settings.restore(IGain);

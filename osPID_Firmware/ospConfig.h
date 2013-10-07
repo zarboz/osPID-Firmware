@@ -54,6 +54,11 @@ enum { buzzerPin = A5 };
 //    trip limits, and profile settings -- will not be upated
 //    if this setting is changed.
 #define UNITS_FAHRENHEIT
+#ifdef UNITS_FAHRENHEIT
+const bool unitsFahrenheit = true;
+#else
+const bool unitsFahrenheit = false;
+#endif
 
 // use simulator for input/output
 #undef USE_SIMULATOR

@@ -208,7 +208,7 @@ bool __attribute__ ((noinline)) after(unsigned long targetTime)
 }
 
 #define MINIMUM(a,b) (((a)<(b))?(a):(b))
-#define MAXIMUM(a,b) (((a)>(b))?(a):(b))
+#define MAXIMUM(a,b) (((b)>(a))?(a):(b))
 
 #ifndef SILENCE_BUZZER
 // buzzer 
@@ -291,9 +291,7 @@ void setup()
   updateTimer();
 
   // load the EEPROM settings
-  //clearEEPROM();
   setupEEPROM();
-  //saveEEPROMSettings();
   
   // set up the peripheral devices
   theInputDevice.initialize();
@@ -587,7 +585,7 @@ void loop()
       tripped = false; 
     }
 
-    if ((displayInput != (ospDecimalValue<1>){-19999}) && ((displayInput < lowerTripLimit) || (displayInput > upperTripLimit) || tripped))
+    if ((displayInput != (ospDecimalValue<1>){-19999}) && ((displayInput < lowerTripLimit) || (upperTripLimit < displayInput) || tripped))
     {
       output = 0.0;
       manualOutput = (ospDecimalValue<1>){0};

@@ -534,7 +534,7 @@ static bool __attribute__ ((noinline)) trySetGain(ospDecimalValue<3> *p, long va
 {
   ospDecimalValue<3> gain = makeDecimal<3>(val, decimals);
 
-  if (gain > (ospDecimalValue<3>){32767} || gain < (ospDecimalValue<3>){0})
+  if (((ospDecimalValue<3>){32767} < gain) || (gain < (ospDecimalValue<3>){0}))
     return false;
 
   *p = gain;
@@ -545,7 +545,7 @@ static bool __attribute__ ((noinline)) trySetTemp(ospDecimalValue<1> *p, long va
 {
   ospDecimalValue<1> temp = makeDecimal<1>(val, decimals);
 
-  if (temp > (ospDecimalValue<1>){9999} || temp < (ospDecimalValue<1>){-9999})
+  if (((ospDecimalValue<1>){9999} < temp) || (temp < (ospDecimalValue<1>){-9999}))
     return false;
 
   *p = temp;
@@ -641,7 +641,7 @@ static byte argsForMnemonic(char mnemonic)
     char m = pgm_read_byte_near(&(commandParseData[pivot].mnemonic));
     if (m < mnemonic)
       start = pivot;
-    else if (m > mnemonic)
+    else if (mnemonic < m)
       end = pivot;
     else // found it!
       return pgm_read_byte_near(&(commandParseData[pivot].args));
@@ -800,17 +800,17 @@ static void processSerialCommand()
       goto out_EINV;
   }
 
-  if ((argDescriptor & ARGS_FLAG_PROFILE_NUMBER) && i1 >= NR_PROFILES)
+  if ((argDescriptor & ARGS_FLAG_PROFILE_NUMBER) && (i1 >= NR_PROFILES))
     goto out_EINV;
 
-  if ((argDescriptor & ARGS_FLAG_FIRST_IS_01) && i1 > 1)
+  if ((argDescriptor & ARGS_FLAG_FIRST_IS_01) && (i1 > 1))
     goto out_EINV;
 
 #undef CHECK_CMD_END
 #undef CHECK_SPACE
 #undef CHECK_P2
 #define BOUNDS_CHECK(f, min, max)                       \
-  if ((f) < (min) || (f) > (max))                       \
+  if (((f) < (min)) || ((max) < (f)))                   \
     goto out_EINV;                                      \
   else do { } while (0)
 
@@ -915,7 +915,7 @@ static void processSerialCommand()
   case 'O': // directly set the output command
     {
       ospDecimalValue<1> o = makeDecimal<1>(i1, d1);
-      if (o > (ospDecimalValue<1>){1000})
+      if ((ospDecimalValue<1>){1000} < o)
         goto out_EINV;
 
       if (tuning || runningProfile || modeIndex != MANUAL)

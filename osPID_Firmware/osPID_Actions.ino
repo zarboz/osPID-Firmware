@@ -42,9 +42,12 @@ static void startAutoTune()
   ATuneModeRemember = myPID.GetMode();
   
   // step value, avoiding output limits 
-  ospDecimalValue<1> o = makeDecimal<1>(output);
-  o = (o < ospDecimalValue<1>{ 500 }) ? o : ospDecimalValue<1>{ 1000 } - o; 
-  aTune.SetOutputStep(double(MINIMUM(aTuneStep, o)));
+  ospDecimalValue<1> s = makeDecimal<1>(output);
+  if ((ospDecimalValue<1>){ 500 } < s)
+    s = (ospDecimalValue<1>){ 1000 } - s; 
+  if (aTuneStep < s)
+    s = aTuneStep;
+  aTune.SetOutputStep(double(s));
  
   myPID.SetMode(MANUAL);
   aTune.SetNoiseBand(double(aTuneNoise));
@@ -155,17 +158,17 @@ static void profileLoopIteration()
     return;
   case ospProfile::STEP_SOAK_AT_VALUE:
     delta = abs(activeSetPoint - lastGoodInput);
-    if (delta > double(profileState.maximumError))
+    if (double(profileState.maximumError) < delta)
       profileState.stepEndMillis = now + profileState.stepDuration;
     // fall through
   case ospProfile::STEP_JUMP_TO_SETPOINT:
-    if (stepTimeLeft > 0)
+    if (0 < stepTimeLeft)
       return;
     break;
   case ospProfile::STEP_WAIT_TO_CROSS:
     if ((lastGoodInput < target) && profileState.temperatureRising)
       return; // not there yet
-    if ((lastGoodInput > target) && !profileState.temperatureRising)
+    if ((target < lastGoodInput) && !profileState.temperatureRising)
       return;
     break;
   }
