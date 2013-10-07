@@ -41,6 +41,9 @@ enum { buttonsPin = A4 };
 // pin assignment for buzzer
 enum { buzzerPin = A5 };
 
+// PI controller instead of PID controller
+#undef PI_CONTROLLER
+
 // quiet mode (buzzer off) 
 #undef SILENCE_BUZZER
 

@@ -240,7 +240,11 @@ PROGMEM DecimalItem decimalItemData[DECIMAL_ITEM_COUNT] =
   { 'O', 'u', 't', DecimalItem::RANGE_0_1000      | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::EDIT_MANUAL_ONLY, &displayOutput },
   { 'P', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &PGain },
   { 'I', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &IGain },
+#ifdef PI_CONTROLLER  
+  { 'D', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES| DecimalItem::NO_EDIT, &DGain },
+#else // PID controller
   { 'D', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &DGain },
+#endif  
   { 'C', 'a', 'l', DecimalItem::RANGE_M999_P999   | DecimalItem::ONE_DECIMAL_PLACE, &displayCalibration },
   { 'C', 'y', 'c', DecimalItem::RANGE_10_32767    | DecimalItem::ONE_DECIMAL_PLACE, &displayWindow },
   { 'M', 'i', 'n', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &lowerTripLimit },

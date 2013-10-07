@@ -45,6 +45,11 @@ static void startAutoTune()
   aTune.SetNoiseBand(double(aTuneNoise));
   aTune.SetOutputStep(double(aTuneStep));
   aTune.SetLookbackSec(aTuneLookBack);
+#ifdef PI_CONTROLLER    
+  aTune.SetControlType(0); // the default
+#else // PID controller
+  aTune.SetControlType(1);
+#endif  
   tuning = true;
 }
 

@@ -76,7 +76,7 @@ byte currentProfileStep;
 boolean runningProfile = false;
 
 // the gain coefficients of the PID controller
-ospDecimalValue<3> PGain = { 2000 } , IGain = { 500 } , DGain = { 2000 };
+ospDecimalValue<3> PGain = { 1000 }, IGain = { 0 }, DGain = { 0 };
 
 // the direction flag for the PID controller
 byte ctrlDirection = DIRECT;
@@ -137,7 +137,12 @@ byte powerOnBehavior = POWERON_CONTINUE_LOOP;
 bool controllerIsBooting = true;
 
 // the parameters for the autotuner
-ospDecimalValue<1> aTuneStep = { 200 } , aTuneNoise = { 10 }; int aTuneLookBack = 10;
+#ifndef UNITS_FAHRENHEIT
+ospDecimalValue<1> aTuneStep = { 90 }, aTuneNoise = { 18 }; 
+#else // Celsius
+ospDecimalValue<1> aTuneStep = { 50 }, aTuneNoise = { 10 }; 
+#endif
+int aTuneLookBack = 10; // units for this parameter is seconds
 PID_ATune aTune(&lastGoodInput, &output);
 
 // whether the autotuner is active
