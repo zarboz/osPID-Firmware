@@ -30,15 +30,17 @@ or values in the same order as they would be written in the "set" version of the
 Multiple values are returned one to a line.
 
 Command list:
-  A -- begin an Auto-tune
+  A? #0-1 -- query / set Auto-tune on / off: 0 = off, 1 = on
 
-  a? #Number #Number #Integer -- set Autotune parameters: step, noise, and lookback
+  a? #Number #Number #Integer -- query / set Autotune parameters: step, noise, and lookback
 
   B? #Number -- query / set input device temperature caliBration value
+  
+  C -- cancel profile execution
 
   c? #Integer -- set the Comm speed, in kbps
 
-  D? #Number -- set D gain
+  d? #Number -- set D gain
 
   E #String -- Execute the profile of the given name
 
@@ -52,7 +54,7 @@ Command list:
 
   l? #0-1 -- enabLe or disabLe temperature limit
 
-  M? #0-1 -- set the loop to manual/automatic Mode
+  M? #0-1 -- set the loop to manual/automatic Mode: 0 = manual, 1 = automatic
 
   N #String -- clear the profile buffer and give it a Name
 
@@ -64,12 +66,12 @@ Command list:
   numbers being { type, duration, endpoint }
 
   p? #Number -- set P gain
-
+  
   Q -- Query -- returns status lines: "S {setpoint}", "I {input}", "O
   {output}" plus "P {profile name} {profile step}" if a profile is active
   or "A active" if currently auto-tuning
 
-  R? #0-1 -- diRection -- set PID gain sign
+  R? #0-1 -- diRection -- set PID gain sign: 0 = direct, 1 = reverse
 
   r #Integer -- Reset the memory to the hardcoded defaults, if and only if the number is -999
 
@@ -581,10 +583,9 @@ struct SerialCommandParseData
 // this table must be sorted in ASCII order, that is A-Z then a-z
 PROGMEM SerialCommandParseData commandParseData[] = 
 {
-  { 'A', ARGS_NONE },
+  { 'A', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
   { 'B', ARGS_ONE_NUMBER | ARGS_FLAG_QUERYABLE },
   { 'C', ARGS_NONE },
-  { 'D', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'E', ARGS_STRING },
   { 'I', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
 #ifndef ATMEGA_32kB_FLASH
@@ -607,6 +608,7 @@ PROGMEM SerialCommandParseData commandParseData[] =
   { 'a', ARGS_THREE_NUMBERS },
   { 'b', ARGS_THREE_NUMBERS | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
   { 'c', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
+  { 'd', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'e', ARGS_ONE_NUMBER | ARGS_FLAG_PROFILE_NUMBER },
   { 'i', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
 #ifndef ATMEGA_32kB_FLASH
@@ -676,6 +678,9 @@ static void processSerialCommand()
 
     switch (serialCommandBuffer[0])
     {
+    case 'A':
+      serialPrintln(tuning);
+      break;
     case 'a':
       serialPrintln(aTuneStep);
       serialPrintln(aTuneNoise);
@@ -688,7 +693,7 @@ static void processSerialCommand()
       serialPrint(baudRate(serialSpeed));
       serialPrintln("00");
       break;
-    case 'D':
+    case 'd':
       serialPrintln(DGain);
       break;
     case 'I':
@@ -738,7 +743,7 @@ static void processSerialCommand()
     default:
       goto out_EINV;
     }
-    goto out_OK;
+    goto out_OK_NO_ACK;
   }
 
 #define CHECK_SPACE()                                   \
@@ -817,9 +822,15 @@ static void processSerialCommand()
   // arguments successfully parsed: try to execute the command
   switch (serialCommandBuffer[0])
   {
-  case 'A': // start an auto-tune
-    startAutoTune();
-    goto out_OK; // no EEPROM writeback needed
+  case 'A': // stop/start auto-tuner
+    if ((tuning ^ (byte) i1) == 0) // autotuner already on/off
+      goto out_OK; // no EEPROM writeback needed
+    tuning = i1;
+    if (tuning)
+      startAutoTune();
+    else
+      stopAutoTune();
+    break;
   case 'a': // set the auto-tune parameters
     aTuneStep = makeDecimal<1>(i3, d3);
     aTuneNoise = makeDecimal<1>(i2, d2);
@@ -832,10 +843,8 @@ static void processSerialCommand()
     theInputDevice.setCalibration(cal);
     displayCalibration = cal;
     break;
-  case 'C': // cancel an auto-tune or profile execution
-    if (tuning)
-      stopAutoTune();
-    else if (runningProfile)
+  case 'C': // cancel profile execution
+    if (runningProfile)
       stopProfile();
     else
       goto out_EMOD;
@@ -844,7 +853,7 @@ static void processSerialCommand()
     if (cmdSetSerialSpeed(i1)) // since this resets the interface, just return
       return;
     goto out_EINV;
-  case 'D': // set the D gain
+  case 'd': // set the D gain
 #ifdef PI_CONTROLLER
     goto out_EMOD;
 #else // PID controller    
@@ -1010,6 +1019,12 @@ static void processSerialCommand()
   // we wrote a setting of some sort: schedule an EEPROM writeback
   markSettingsDirty();
 out_OK:
+  serialPrint(F("OK: "));
+  // acknowledge command by printing it back out
+  serialPrintln(serialCommandBuffer);
+  return;
+  
+out_OK_NO_ACK:  
   serialPrintln(F("OK"));
   return;
 

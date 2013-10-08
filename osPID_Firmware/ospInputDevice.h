@@ -52,7 +52,6 @@ private:
     steinhart += 1.0 / (inputSetting[TEMPERATURE] + 273.15);         // + (1/To)
     steinhart = 1.0 / steinhart;                                     // Invert
     steinhart -= 273.15;                                             // convert to Celsius
-    return steinhart;
   }
   
 

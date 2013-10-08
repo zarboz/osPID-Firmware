@@ -303,7 +303,9 @@ void setup()
 #endif
 
   long int pause = now + 2000 - millis();
-  delay(MAXIMUM(pause, 10));
+  if (pause < 10)
+    pause = 10;
+  delay(pause);
   updateTimer();
 
   // configure the PID loop 
@@ -384,7 +386,7 @@ static void checkButtons()
   }
   else if (heldButton != BUTTON_NONE)
   {
-    if (heldButton == BUTTON_OK && (after(autoRepeatTriggerTime + (400 - AUTOREPEAT_DELAY))))
+    if (heldButton == BUTTON_OK && (after(autoRepeatTriggerTime + 400 - AUTOREPEAT_DELAY)))
     {
       // BUTTON_OK was held for at least 400 ms: execute a long-press
       bool longPress = okKeyLongPress();
@@ -585,7 +587,7 @@ void loop()
       tripped = false; 
     }
 
-    if ((displayInput != (ospDecimalValue<1>){-19999}) && ((displayInput < lowerTripLimit) || (upperTripLimit < displayInput) || tripped))
+    if ((displayInput != (ospDecimalValue<1>){-19999}) && ((displayInput < lowerTripLimit) || (upperTripLimit < displayInput ) || tripped))
     {
       output = 0.0;
       manualOutput = (ospDecimalValue<1>){0};

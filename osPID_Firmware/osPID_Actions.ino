@@ -36,10 +36,12 @@ void ospBugCheck(const char *block, int line)
 }
 
 byte ATuneModeRemember;
+ospDecimalValue<1> manualOutputRemember;
 
 static void startAutoTune()
 {
   ATuneModeRemember = myPID.GetMode();
+  manualOutputRemember = manualOutput;
   
   // step value, avoiding output limits 
   ospDecimalValue<1> s = makeDecimal<1>(output);
@@ -69,6 +71,7 @@ static void stopAutoTune()
 
   // restore the output to the last manual command; it will be overwritten by the PID
   // if the loop is active
+  manualOutput = manualOutputRemember;
   setOutputToManualOutput();
   myPID.SetMode(modeIndex);
 }
