@@ -1,4 +1,4 @@
-/* This file contains the implementation of the on-screen menu system of the controller */
+BAUD/* This file contains the implementation of the on-screen menu system of the controller */
 
 #include <avr/io.h>
 #include <avr/pgmspace.h>
@@ -117,12 +117,12 @@ enum
 };
 
 PROGMEM const byte mainMenuItems[4] = { ITEM_DASHBOARD_MENU, ITEM_PROFILE_MENU, ITEM_CONFIG_MENU, ITEM_AUTOTUNE_CMD };
-PROGMEM const byte dashMenuItems[4] = { ITEM_SETPOINT, ITEM_INPUT, ITEM_OUTPUT, ITEM_PID_MODE };
+PROGMEM const byte dashMenuItems[5] = { ITEM_SETPOINT, ITEM_INPUT, ITEM_OUTPUT, ITEM_PID_MODE, ITEM_TRIP_MENU };
 #ifdef STANDALONE_CONTROLLER
-PROGMEM const byte configMenuItems[10] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_TRIP_MENU, ITEM_INPUT_MENU, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, 
+PROGMEM const byte configMenuItems[9] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, 
   ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU };
 #else
-PROGMEM const byte configMenuItems[11] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_TRIP_MENU, ITEM_INPUT_MENU, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, 
+PROGMEM const byte configMenuItems[10] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_INPUT_MENU, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, 
   ITEM_POWERON_MENU, ITEM_COMM_MENU, ITEM_RESET_ROM_MENU };
 #endif  
 PROGMEM const byte profileMenuItems[3] = { ITEM_PROFILE1, ITEM_PROFILE2, ITEM_PROFILE3 };
@@ -637,9 +637,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
 #endif    
 #ifndef STANDALONE_CONTROLLER
   case ITEM_COMM_9p6k:
-  case ITEM_COMM_14p4k:
   case ITEM_COMM_19p2k:
-  case ITEM_COMM_28p8k:
   case ITEM_COMM_38p4k:
   case ITEM_COMM_57p6k:
   case ITEM_COMM_115k:
@@ -833,6 +831,10 @@ static void backKeyPress()
     menuState.firstItemMenuIndex = 0;
     break;
   case ITEM_TRIP_MENU:
+    menuState.currentMenu = ITEM_DASHBOARD_MENU;
+    menuState.highlightedItemMenuIndex = 4;
+    menuState.firstItemMenuIndex = 3;
+    break;
   case ITEM_INPUT_MENU:
   case ITEM_POWERON_MENU:
 #ifndef STANDALONE_CONTROLLER  
@@ -840,8 +842,8 @@ static void backKeyPress()
 #endif  
   case ITEM_RESET_ROM_MENU:
     menuState.currentMenu = ITEM_CONFIG_MENU;
-    menuState.highlightedItemMenuIndex = prevMenu - ITEM_TRIP_MENU + 
-      ((prevMenu == ITEM_TRIP_MENU) || (prevMenu == ITEM_INPUT_MENU) ? 4 : 6);
+    menuState.highlightedItemMenuIndex = prevMenu - ITEM_INPUT_MENU + 
+      (prevMenu == ITEM_INPUT_MENU) ? 4 : 6;
     menuState.firstItemMenuIndex = menuState.highlightedItemMenuIndex - 1;
     break;
   default:

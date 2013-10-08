@@ -170,18 +170,16 @@ const PROGMEM char Pprofile[] = "Profile ";
 enum 
 {
   SERIAL_SPEED_9p6k = 0,
-  SERIAL_SPEED_14p4k = 1,
-  SERIAL_SPEED_19p2k = 2,
-  SERIAL_SPEED_28p8k = 3,
-  SERIAL_SPEED_38p4k = 4,
-  SERIAL_SPEED_57p6k = 5,
-  SERIAL_SPEED_115k = 6
+  SERIAL_SPEED_19p2k,
+  SERIAL_SPEED_38p4k,
+  SERIAL_SPEED_57p6k,
+  SERIAL_SPEED_115k
 };
 
 #ifndef STANDALONE_CONTROLLER
-byte serialSpeed = SERIAL_SPEED_28p8k;
+byte serialSpeed = SERIAL_SPEED_9p6k;
 
-PROGMEM unsigned int serialSpeedTable[7] = { 96, 144, 192, 288, 384, 576, 1152 };
+PROGMEM unsigned int serialSpeedTable[7] = { 96, 192, 384, 576, 1152 };
 
 unsigned int __attribute__((noinline)) baudRate(byte i)
 {
