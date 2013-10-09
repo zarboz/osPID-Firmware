@@ -50,9 +50,9 @@ Command list:
 
   i? #Number -- set I gain
 
-  L? #Number #Number -- set alarm lower and upper temperature Limits
+  L? #0-1 -- enabLe or disabLe temperature limit
 
-  l? #0-1 -- enabLe or disabLe temperature limit
+  l? #Number -- query / set alarm Lower temperature limit
 
   M? #0-1 -- set the loop to manual/automatic Mode: 0 = manual, 1 = automatic
 
@@ -82,6 +82,8 @@ Command list:
   T? -- query Trip state or clear a trip
 
   t? #0-1 -- trip auto-reseT -- enable or disable automatic recovery from trips
+
+  u? #Number -- query / set alarm Upper temperature limit
 
   V #0-2 -- saVe the profile buffer to profile N
 
@@ -591,7 +593,7 @@ PROGMEM SerialCommandParseData commandParseData[] =
 #ifndef ATMEGA_32kB_FLASH
   { 'K', ARGS_ONE_NUMBER },
 #endif
-  { 'L', ARGS_TWO_NUMBERS | ARGS_FLAG_QUERYABLE },
+  { 'L', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
   { 'M', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
   { 'N', ARGS_STRING },
   { 'O', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
@@ -614,12 +616,13 @@ PROGMEM SerialCommandParseData commandParseData[] =
 #ifndef ATMEGA_32kB_FLASH
   { 'k', ARGS_TWO_NUMBERS },
 #endif
-  { 'l', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
+  { 'l', ARGS_ONE_NUMBER | ARGS_FLAG_QUERYABLE },
   { 'o', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'p', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'r', ARGS_ONE_NUMBER },
   { 's', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 't', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
+  { 'u', ARGS_ONE_NUMBER | ARGS_FLAG_QUERYABLE },
   { 'x', ARGS_ONE_NUMBER | ARGS_FLAG_PROFILE_NUMBER }
 };
 
@@ -702,11 +705,10 @@ static void processSerialCommand()
     case 'i':
       serialPrintln(IGain);
       break;
-    case 'L':
-      serialPrintlnTemp(lowerTripLimit);
-      serialPrintlnTemp(upperTripLimit);
-      break;
     case 'l':
+      serialPrintlnTemp(lowerTripLimit);
+      break;
+    case 'L':
       serialPrintln(tripLimitsEnabled);
       break;
     case 'M':
@@ -733,12 +735,15 @@ static void processSerialCommand()
     case 'T':
       serialPrintln(tripped);
       break;
+    case 't':
+      serialPrintln(tripAutoReset);
+      break;
+    case 'u':
+      serialPrintlnTemp(upperTripLimit);
+      break;
     case 'W':
       serialPrint(theOutputDevice.getOutputWindowSeconds());
       serialPrintln(" seconds");
-      break;
-    case 't':
-      serialPrintln(tripAutoReset);
       break;
     default:
       goto out_EINV;
@@ -894,17 +899,13 @@ static void processSerialCommand()
     cmdPoke(i2, i1);
     goto out_OK; // no EEPROM writeback needed
 #endif    
-  case 'L': // set trip limits
+  case 'l': // set trip lower limit
     {
-      ospDecimalValue<1> lower;
-      if (!trySetTemp(&lower, i2, d1))
-        goto out_EINV;
-      if (!trySetTemp(&upperTripLimit, i1, d1))
-        goto out_EINV;
-      lowerTripLimit = lower;
+      if (!trysettemp(&lowertriplimit, i1, d1))
+        goto out_einv;
     }
     break;
-  case 'l': // set limit trip enabled
+  case 'L': // set limit trip enabled
     tripLimitsEnabled = i1;
     break;
   case 'M': // set the controller mode (PID or manual)
@@ -990,6 +991,12 @@ static void processSerialCommand()
     goto out_OK; // no EEPROM writeback needed
   case 't': // set trip auto-reset
     tripAutoReset = i1;
+    break;
+  case 'u': // set trip upper limit
+    {
+      if (!trysettemp(&lowertriplimit, i1, d1))
+        goto out_einv;
+    }
     break;
   case 'V': // save the profile buffer to EEPROM
     saveEEPROMProfile(i1);
