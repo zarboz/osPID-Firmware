@@ -413,7 +413,6 @@ static void getProfileStepData(byte profileIndex, byte i, byte *type, unsigned l
   const int base = PROFILE_BLOCK_START_OFFSET
                     + profileIndex * PROFILE_BLOCK_LENGTH;
 
-
 #ifndef ATMEGA_32kB_FLASH
   ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
 #endif  

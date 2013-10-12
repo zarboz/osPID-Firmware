@@ -1,4 +1,4 @@
-BAUD/* This file contains the implementation of the on-screen menu system of the controller */
+/* This file contains the implementation of the on-screen menu system of the controller */
 
 #include <avr/io.h>
 #include <avr/pgmspace.h>

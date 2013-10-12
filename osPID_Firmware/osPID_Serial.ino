@@ -60,21 +60,25 @@ Command list:
   M? #0-1 -- set the loop to manual/automatic Mode: 0 = manual, 1 = automatic
 
   N? #String -- clear the profile buffer and give it a Name, or query 
-     the Names of the three saved profiles
+     the Name of the active profile
 
   O? #Number -- set Output value
 
   o? #Integer -- set power-On behavior
 
   P? #Integer #Integer #Number -- add a steP to the profile buffer with the
-     numbers being {type, duration, targetSetpoint}, or query which
-     Profile is being run, returning {profile number, profile step, milliseconds since start of step}
+     numbers being {type, duration, endpoint}, or query which Profile step
+     being run, returning {profile step, type, duration, targetSetPoint, time} 
+     where time in seconds is the time remaining until the end of the step, 
+     exceptfor type STEP_WAIT_TO_CROSS where it is the time elapsed since the 
+     beginning uof the step
    
   p? #Number -- set P gain
   
   Q -- Query -- returns status lines: "S {setpoint}", "I {input}", 
-    "O {output}" plus "P {profile name} {profile step}" if a profile 
-    is active or "A active" if currently auto-tuning
+    "O {output}" plus "N {profile name}" "P {profile step, ... as above}" 
+    if a profile is active or else "A 1" if currently auto-tuning
+    and "A 0" if the auto-tuner is off
 
   R? #0-1 -- diRection -- set PID gain sign: 0 = direct, 1 = reverse
 
@@ -385,63 +389,46 @@ static void cmdIdentify()
 {
   serialPrint(F("Unit \""));
   serialPrintln(reinterpret_cast<const __FlashStringHelper *>(PcontrollerName));
-  serialPrintln('"\nVersion ');
+  serialPrintln("\"\nVersion ");
   serialPrintln(reinterpret_cast<const __FlashStringHelper *>(Pversion));
 }
 
-static void serialPrintProfileName(profileIndex)
+static void serialPrintProfileName(byte profileIndex)
 {
-  serialPrint(char('\"'));
+  serialPrint(char('"'));
   for (byte i = 0; i < ospProfile::NAME_LENGTH; i++)
   {
     char ch = getProfileNameCharAt(profileIndex, i);
-    if (ch == '\0')
+    if (ch == 0)
       break;
-    serialPrint(ch);
+    Serial.write(ch);
   }
-  serialPrint(char('\"'));
+  serialPrint(char('"'));
 }
 
 static void cmdQuery()
 {
-  serialPrint(F("ACK::S "));
-  serialPrintlnFloatTemp(activeSetPoint);
-  serialPrint(F("ACK::I "));
-  serialPrintlnFloatTemp(input);
-  serialPrint(F("ACK::O "));
-  serialPrint(output);
-  serialPrintln(F(" %"));
-
+  serialCommandBuffer[0] = 'S';
+  serialCommandBuffer[1] = '?';
+  serialCommandBuffer[2] = '\n';
+  serialCommandLength = 3;
+  processSerialCommand();        // S?
+  serialCommandBuffer[0] = 'I';
+  processSerialCommand();        // I?
+  serialCommandBuffer[0] = 'O';
+  processSerialCommand();        // O?
+  
   if (runningProfile)
   {
-    serialPrint(F("P "));
-    serialPrintProfileName(activeProfileIndex);
-    serialPrint(char(' '));
-    serialPrint(currentProfileStep);
-    serialPrint(char(' '));
-    serialPrint(profileState.type);
-    serialPrint(char(' '));
-    serialPrint(profileState.targetSetpoint);
-    serialPrint(char(' '));
-    if (
-      (profileState.type == STEP_RAMP_TO_SETPOINT) || 
-      (profileState.type == STEP_JUMP_TO_SETPOINT) ||
-      (profileState.type == STEP_SOAK_AT_VALUE)
-    )
-    {
-      serialPrint(profileState.stepEndMillis);
-    }
-    else if ((profileState.type == STEP_WAIT_TO_CROSS))
-    {
-      long elapsed = now - profileState.stepEndMillis + profileState.stepDuration;
-      serialPrint(elapsed);
-    }
-    serialPrintln(F("::OK"));
+    serialCommandBuffer[0] = 'N';
+    processSerialCommand();        // N?
+    serialCommandBuffer[0] = 'P';
+    processSerialCommand();        // P?
   }
   else
   {
-    serialPrint(F("ACK::A "));
-    serialPrintln(char(tuning ? '1' : '0' ));
+    serialCommandBuffer[0] = 'A';
+    processSerialCommand();        // A?
   }
 }
 
@@ -526,6 +513,28 @@ static void cmdExamineSettings()
   // same for integer settings, if any
 }
 
+static void serialPrintProfileState(byte profileIndex, byte stepIndex)
+{
+  byte type;
+  unsigned long duration;
+  ospDecimalValue<1> endpoint;
+
+  getProfileStepData(profileIndex, stepIndex, &type, &duration, &endpoint);
+
+  if (type == ospProfile::STEP_INVALID)
+    return;
+  if (type & ospProfile::STEP_FLAG_BUZZER)
+    serialPrint(F(" *"));
+  else
+    serialPrint(F("  "));   
+  serialPrint(type & ospProfile::STEP_TYPE_MASK);  
+  serialPrint(' ');
+  serialPrint(duration); 
+  serialPrint(' ');
+  serialPrintln(endpoint);
+  
+}
+  
 static void cmdExamineProfile(byte profileIndex)
 {
   serialPrint(reinterpret_cast<const __FlashStringHelper *>(Pprofile));
@@ -540,23 +549,7 @@ static void cmdExamineProfile(byte profileIndex)
 
   for (byte i = 0; i < ospProfile::NR_STEPS; i++)
   {
-    byte type;
-    unsigned long duration;
-    ospDecimalValue<1> endpoint;
-
-    getProfileStepData(profileIndex, i, &type, &duration, &endpoint);
-
-    if (type == ospProfile::STEP_INVALID)
-      break;
-    if (type & ospProfile::STEP_FLAG_BUZZER)
-      serialPrint(F(" *"));
-    else
-      serialPrint(F("  "));
-    serialPrint(type & ospProfile::STEP_TYPE_MASK);
-    serialPrint(' ');
-    serialPrint(duration);
-    serialPrint(' ');
-    serialPrintln(endpoint);
+    serialPrintProfileState(profileIndex, i);
   }
 }
 
@@ -745,28 +738,43 @@ static void processSerialCommand()
       serialPrintln(modeIndex);
       break;
     case 'N':
-      for (profileIndex = 0; profileIndex < 3; profileIndex++)
-      {
-        serialPrintProfileName(profileIndex);
-        serialPrint(char(' '));
-      }
-      serialPrintln();
+      if (!runningProfile)
+        goto out_EINV;
+      serialPrintProfileName(activeProfileIndex);
+      Serial.println();
       break;
     case 'O':
       serialPrint(output);
-      serialPrintln(F(" %"))
+      serialPrintln(F(" %"));
       break;
     case 'o':
       serialPrintln(powerOnBehavior);
       break;
     case 'P':
-      if (runningProfile)
+      if (!runningProfile)
+        goto out_EINV;
+      serialPrint(F("P "));
+      serialPrint(currentProfileStep);
+      serialPrint(' ');
+      serialPrint(profileState.stepType);
+      serialPrint(' ');
+      serialPrint(profileState.stepDuration);
+      serialPrint(' ');
+      serialPrint(profileState.targetSetpoint);
+      if (
+        (profileState.stepType == ospProfile::STEP_RAMP_TO_SETPOINT) || 
+        (profileState.stepType == ospProfile::STEP_JUMP_TO_SETPOINT) ||
+        (profileState.stepType == ospProfile::STEP_SOAK_AT_VALUE)
+      )
       {
-        serialPrint(F("P "));
-        serialPrintProfileName(activeProfileIndex);
-        serialPrint(char(' '));
-        serialPrintln(currentProfileStep);
+        serialPrint(profileState.stepEndMillis);
       }
+      else if (profileState.stepType == ospProfile::STEP_WAIT_TO_CROSS)
+      {
+        long elapsed = now - profileState.stepEndMillis + profileState.stepDuration;
+        serialPrint(elapsed);
+      }
+      Serial.println();
       break;
     case 'p':
       serialPrintln(PGain);
@@ -954,8 +962,8 @@ static void processSerialCommand()
 #endif    
   case 'l': // set trip lower limit
     {
-      if (!trysettemp(&lowertriplimit, i1, d1))
-        goto out_einv;
+      if (!trySetTemp(&lowerTripLimit, i1, d1))
+        goto out_EINV;
     }
     break;
   case 'L': // set limit trip enabled
@@ -1044,8 +1052,8 @@ static void processSerialCommand()
     break;
   case 'u': // set trip upper limit
     {
-      if (!trysettemp(&lowertriplimit, i1, d1))
-        goto out_einv;
+      if (!trySetTemp(&lowerTripLimit, i1, d1))
+        goto out_EINV;
     }
     break;
   case 'V': // save the profile buffer to EEPROM
