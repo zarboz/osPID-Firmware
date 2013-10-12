@@ -156,6 +156,7 @@ static void profileLoopIteration()
     }
     delta = target - double(profileState.initialSetpoint);
     // FIXME: does this handle rounding correctly?
+    // FIXME: probably since it is now floating point arithmetic
     activeSetPoint = target - 
       (delta * stepTimeLeft / profileState.stepDuration);
     return;

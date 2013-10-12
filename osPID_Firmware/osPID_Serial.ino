@@ -43,12 +43,15 @@ Command list:
   d? #Number -- set D gain
 
   E #String -- Execute the profile of the given name
+    FIXME can get rid of this command if we are short of space
 
   e #0-2 -- Execute the profile of the given number
 
-  I? #0-3 -- query or set Input sensor
+  I? #Number -- set Input value
 
   i? #Number -- set I gain
+
+  J? #0-3 -- Select setpoint -- changes which setpoint is active
 
   L? #0-1 -- enabLe or disabLe temperature limit
 
@@ -56,20 +59,22 @@ Command list:
 
   M? #0-1 -- set the loop to manual/automatic Mode: 0 = manual, 1 = automatic
 
-  N #String -- clear the profile buffer and give it a Name
+  N? #String -- clear the profile buffer and give it a Name, or query 
+     the Names of the three saved profiles
 
   O? #Number -- set Output value
 
   o? #Integer -- set power-On behavior
 
-  P #Integer #Integer #Number -- add a step to the profile buffer with the
-  numbers being { type, duration, endpoint }
-
+  P? #Integer #Integer #Number -- add a steP to the profile buffer with the
+     numbers being {type, duration, targetSetpoint}, or query which
+     Profile is being run, returning {profile number, profile step, milliseconds since start of step}
+   
   p? #Number -- set P gain
   
-  Q -- Query -- returns status lines: "S {setpoint}", "I {input}", "O
-  {output}" plus "P {profile name} {profile step}" if a profile is active
-  or "A active" if currently auto-tuning
+  Q -- Query -- returns status lines: "S {setpoint}", "I {input}", 
+    "O {output}" plus "P {profile name} {profile step}" if a profile 
+    is active or "A active" if currently auto-tuning
 
   R? #0-1 -- diRection -- set PID gain sign: 0 = direct, 1 = reverse
 
@@ -77,7 +82,7 @@ Command list:
 
   S? #Number -- Setpoint -- change the (currently active) setpoint
 
-  s? #0-3 -- Select setpoint -- changes which setpoint is active
+  s? #0-3 -- query or set input sensor
 
   T? -- query Trip state or clear a trip
 
@@ -96,7 +101,7 @@ Command list:
   Y -- identifY -- returns two lines: "osPid vX.YYtag" and "Unit {unitName}"
   
   
-Removed codes: could maybe reinsert on Arduinos with sufficient flash memory
+Codes removed on Arduinos with 32kB flash memory:
 
   K #Integer -- peeK at memory address, +ve number = SRAM, -ve number = EEPROM; returns
   the byte value in hexadecimal
@@ -111,10 +116,10 @@ Response codes:
 
 Programming in a profile is performed as a multi-command process. First the
 profile buffer is opened by
-  n profNam
-where profNam is a <= 7 character name for the profile. Then 0-16 profile steps
+  N profNam
+where profNam is a <= 15 character name for the profile. Then 0-16 profile steps
 are programmed through
-  P stepType durationInMilliseconds #Number
+  P stepType durationInMilliseconds targetSetPoint
 and finally the profile is saved to profile buffer #N with
   V #N
 . The profile can then be executed by name or number with
@@ -384,33 +389,60 @@ static void cmdIdentify()
   serialPrintln(reinterpret_cast<const __FlashStringHelper *>(Pversion));
 }
 
+static void serialPrintProfileName(profileIndex)
+{
+  serialPrint(char('\"'));
+  for (byte i = 0; i < ospProfile::NAME_LENGTH; i++)
+  {
+    char ch = getProfileNameCharAt(profileIndex, i);
+    if (ch == '\0')
+      break;
+    serialPrint(ch);
+  }
+  serialPrint(char('\"'));
+}
+
 static void cmdQuery()
 {
-  serialPrint(F("S "));
+  serialPrint(F("ACK::S "));
   serialPrintlnFloatTemp(activeSetPoint);
-  serialPrint(F("I "));
+  serialPrint(F("ACK::I "));
   serialPrintlnFloatTemp(input);
-  serialPrint(F("O "));
+  serialPrint(F("ACK::O "));
   serialPrint(output);
   serialPrintln(F(" %"));
 
   if (runningProfile)
   {
-    serialPrint(F("P \""));
-    for (byte i = 0; i < ospProfile::NAME_LENGTH; i++)
+    serialPrint(F("P "));
+    serialPrintProfileName(activeProfileIndex);
+    serialPrint(char(' '));
+    serialPrint(currentProfileStep);
+    serialPrint(char(' '));
+    serialPrint(profileState.type);
+    serialPrint(char(' '));
+    serialPrint(profileState.targetSetpoint);
+    serialPrint(char(' '));
+    if (
+      (profileState.type == STEP_RAMP_TO_SETPOINT) || 
+      (profileState.type == STEP_JUMP_TO_SETPOINT) ||
+      (profileState.type == STEP_SOAK_AT_VALUE)
+    )
     {
-      char ch = getProfileNameCharAt(activeProfileIndex, i);
-
-      if (ch == '\0')
-        break;
-      serialPrint(ch);
+      serialPrint(profileState.stepEndMillis);
     }
-    serialPrint(F("\" "));
-    serialPrintln(currentProfileStep);
+    else if ((profileState.type == STEP_WAIT_TO_CROSS))
+    {
+      long elapsed = now - profileState.stepEndMillis + profileState.stepDuration;
+      serialPrint(elapsed);
+    }
+    serialPrintln(F("::OK"));
   }
-
-  if (tuning)
-    serialPrintln(F("A active"));
+  else
+  {
+    serialPrint(F("ACK::A "));
+    serialPrintln(char(tuning ? '1' : '0' ));
+  }
 }
 
 static void cmdExamineSettings()
@@ -500,13 +532,7 @@ static void cmdExamineProfile(byte profileIndex)
   serialPrint(char('0' + profileIndex));
   serialPrintFcolon();
 
-  for (byte i = 0; i < ospProfile::NAME_LENGTH; i++)
-  {
-    char ch = getProfileNameCharAt(profileIndex, i);
-    if (ch == '\0')
-      break;
-    serialPrint(ch);
-  }
+  serialPrintProfileName(profileIndex);
   Serial.println();
 
   serialPrint(F("Checksum: "));
@@ -590,14 +616,15 @@ PROGMEM SerialCommandParseData commandParseData[] =
   { 'C', ARGS_NONE },
   { 'E', ARGS_STRING },
   { 'I', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
+  { 'J', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
 #ifndef ATMEGA_32kB_FLASH
   { 'K', ARGS_ONE_NUMBER },
 #endif
   { 'L', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
   { 'M', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
-  { 'N', ARGS_STRING },
+  { 'N', ARGS_STRING | ARGS_FLAG_QUERYABLE },
   { 'O', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
-  { 'P', ARGS_THREE_NUMBERS },
+  { 'P', ARGS_THREE_NUMBERS | ARGS_FLAG_QUERYABLE },
   { 'Q', ARGS_NONE },
   { 'R', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
   { 'S', ARGS_ONE_NUMBER | ARGS_FLAG_QUERYABLE },
@@ -700,10 +727,13 @@ static void processSerialCommand()
       serialPrintln(DGain);
       break;
     case 'I':
-      serialPrintln(inputType);
+      serialPrintlnFloatTemp(input);
       break;
     case 'i':
       serialPrintln(IGain);
+      break;
+    case 'J':
+      serialPrintln(setPointIndex);
       break;
     case 'l':
       serialPrintlnTemp(lowerTripLimit);
@@ -714,11 +744,29 @@ static void processSerialCommand()
     case 'M':
       serialPrintln(modeIndex);
       break;
+    case 'N':
+      for (profileIndex = 0; profileIndex < 3; profileIndex++)
+      {
+        serialPrintProfileName(profileIndex);
+        serialPrint(char(' '));
+      }
+      serialPrintln();
+      break;
     case 'O':
-      serialPrintln(output);
+      serialPrint(output);
+      serialPrintln(F(" %"))
       break;
     case 'o':
       serialPrintln(powerOnBehavior);
+      break;
+    case 'P':
+      if (runningProfile)
+      {
+        serialPrint(F("P "));
+        serialPrintProfileName(activeProfileIndex);
+        serialPrint(char(' '));
+        serialPrintln(currentProfileStep);
+      }
       break;
     case 'p':
       serialPrintln(PGain);
@@ -730,7 +778,7 @@ static void processSerialCommand()
       serialPrintlnFloatTemp(activeSetPoint);
       break;
     case 's':
-      serialPrintln(setPointIndex);
+      serialPrintln(inputType);
       break;
     case 'T':
       serialPrintln(tripped);
@@ -879,15 +927,20 @@ static void processSerialCommand()
     activeProfileIndex = i1;
     startProfile();
     goto out_OK; // no EEPROM writeback needed
-  case 'I': // set the inputType
-    BOUNDS_CHECK(i1, 0, 2);
-    inputType = i1;
-    break;
+  case 'I': // directly set the input command
+    goto out_EMOD; // (I don't think so)
   case 'i': // set the I gain
     if (tuning)
       goto out_EMOD;
     if (!trySetGain(&IGain, i1, d1))
       goto out_EINV;
+    break;
+  case 'J': // change the active setpoint
+    if (i1 >= 4)
+      goto out_EINV;
+
+    setPointIndex = i1;
+    updateActiveSetPoint();
     break;
 #ifndef ATMEGA_32kB_FLASH  
   case 'K': // memory peek
@@ -974,12 +1027,9 @@ static void processSerialCommand()
       updateActiveSetPoint();
     }
     break;
-  case 's': // change the active setpoint
-    if (i1 >= 4)
-      goto out_EINV;
-
-    setPointIndex = i1;
-    updateActiveSetPoint();
+  case 's': // set the inputType
+    BOUNDS_CHECK(i1, 0, 2);
+    inputType = i1;
     break;
   case 'T': // clear a trip
     if (!tripped)
@@ -1026,21 +1076,21 @@ static void processSerialCommand()
   // we wrote a setting of some sort: schedule an EEPROM writeback
   markSettingsDirty();
 out_OK:
-  serialPrint(F("OK: "));
+  serialPrint(F("ACK::"));
   // acknowledge command by printing it back out
   serialPrintln(serialCommandBuffer);
   return;
   
 out_OK_NO_ACK:  
-  serialPrintln(F("OK"));
+  serialPrintln(F("::OK"));
   return;
 
 out_EINV:
-  serialPrintln(F("EINV"));
+  serialPrintln(F("::EINV"));
   return;
 
 out_EMOD:
-  serialPrintln(F("EMOD"));
+  serialPrintln(F("::EMOD"));
   return;
 }
 
