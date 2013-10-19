@@ -94,9 +94,7 @@ enum
   ITEM_INPUT_SIMULATOR,
 
   ITEM_COMM_9p6k,
-  ITEM_COMM_14p4k,
   ITEM_COMM_19p2k,
-  ITEM_COMM_28p8k,
   ITEM_COMM_38p4k,
   ITEM_COMM_57p6k,
   ITEM_COMM_115k,
@@ -122,8 +120,8 @@ PROGMEM const byte dashMenuItems[5] = { ITEM_SETPOINT, ITEM_INPUT, ITEM_OUTPUT, 
 PROGMEM const byte configMenuItems[9] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, 
   ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU };
 #else
-PROGMEM const byte configMenuItems[10] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_INPUT_MENU, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, 
-  ITEM_POWERON_MENU, ITEM_COMM_MENU, ITEM_RESET_ROM_MENU };
+PROGMEM const byte configMenuItems[10] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_INPUT_MENU, ITEM_CALIBRATION, 
+  ITEM_WINDOW_LENGTH, ITEM_POWERON_MENU, ITEM_COMM_MENU, ITEM_RESET_ROM_MENU };
 #endif  
 PROGMEM const byte profileMenuItems[3] = { ITEM_PROFILE1, ITEM_PROFILE2, ITEM_PROFILE3 };
 PROGMEM const byte setpointMenuItems[4] = { ITEM_SETPOINT1, ITEM_SETPOINT2, ITEM_SETPOINT3, ITEM_SETPOINT4 };
@@ -133,8 +131,7 @@ PROGMEM const byte inputMenuItems[3] = { ITEM_INPUT_THERMISTOR, ITEM_INPUT_ONEWI
 PROGMEM const byte inputMenuItems[1] = { ITEM_SIMULATOR };
 #endif
 #ifndef STANDALONE_CONTROLLER
-PROGMEM const byte commMenuItems[7] = { ITEM_COMM_9p6k, ITEM_COMM_14p4k, ITEM_COMM_19p2k, ITEM_COMM_28p8k,
-  ITEM_COMM_38p4k, ITEM_COMM_57p6k, ITEM_COMM_115k };
+PROGMEM const byte commMenuItems[5] = { ITEM_COMM_9p6k, ITEM_COMM_19p2k, ITEM_COMM_38p4k, ITEM_COMM_57p6k, ITEM_COMM_115k };
 #endif  
 PROGMEM const byte poweronMenuItems[3] = { ITEM_POWERON_DISABLE, ITEM_POWERON_CONTINUE, ITEM_POWERON_RESUME_PROFILE };
 PROGMEM const byte tripMenuItems[4] = { ITEM_TRIP_ENABLED, ITEM_LOWER_TRIP_LIMIT, ITEM_UPPER_TRIP_LIMIT, ITEM_TRIP_AUTORESET };
@@ -312,7 +309,7 @@ static void drawStartupBanner()
   LCDsetCursorBottomLeft();
   LCDprintln(Pversion);
 #ifndef SILENCE_BUZZER  
-  buzzMillis(10);
+  // buzzMillis(10);
 #endif  
 }
 
@@ -836,14 +833,14 @@ static void backKeyPress()
     menuState.firstItemMenuIndex = 3;
     break;
   case ITEM_INPUT_MENU:
+    prevMenu -= 2;
   case ITEM_POWERON_MENU:
 #ifndef STANDALONE_CONTROLLER  
   case ITEM_COMM_MENU:
 #endif  
   case ITEM_RESET_ROM_MENU:
     menuState.currentMenu = ITEM_CONFIG_MENU;
-    menuState.highlightedItemMenuIndex = prevMenu - ITEM_INPUT_MENU + 
-      (prevMenu == ITEM_INPUT_MENU) ? 4 : 6;
+    menuState.highlightedItemMenuIndex = prevMenu - ITEM_INPUT_MENU + 6;
     menuState.firstItemMenuIndex = menuState.highlightedItemMenuIndex - 1;
     break;
   default:
@@ -1116,13 +1113,12 @@ static void okKeyPress()
 
 #ifndef STANDALONE_CONTROLLER
   case ITEM_COMM_9p6k:
-  case ITEM_COMM_14p4k:
   case ITEM_COMM_19p2k:
-  case ITEM_COMM_28p8k:
   case ITEM_COMM_38p4k:
   case ITEM_COMM_57p6k:
   case ITEM_COMM_115k:
     serialSpeed = (item - ITEM_COMM_9p6k);
+    Serial.flush();
     setupSerial();
     markSettingsDirty();
 

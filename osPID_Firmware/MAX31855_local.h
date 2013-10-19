@@ -7,9 +7,9 @@
 	#include "WProgram.h"
 #endif
 
-#define	FAULT_OPEN			10000
-#define	FAULT_SHORT_GND	10001
-#define	FAULT_SHORT_VCC	10002	
+#define	FAULT_OPEN      10000
+#define	FAULT_SHORT_GND 10001
+#define	FAULT_SHORT_VCC 10002	
 
 enum	unit_t
 {
@@ -20,7 +20,7 @@ enum	unit_t
 class	MAX31855
 {
 	public:
-		MAX31855(unsigned char SO, unsigned	char CS, unsigned char SCK);
+		MAX31855(unsigned char SO, unsigned char CS, unsigned char SCK);
 	
 		double	readThermocouple(unit_t	unit);
 		double	readJunction(unit_t	unit);

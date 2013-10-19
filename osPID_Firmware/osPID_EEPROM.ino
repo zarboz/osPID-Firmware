@@ -289,12 +289,18 @@ static void restoreEEPROMSettings()
 
   // clear EEPROM if units have changed
   settings.restore(sb2.byteVal);
+  
+  /*
+  // FIXME
+  // this may not be working
+  // comment it out for the moment
   if (unitsFahrenheit != sb2.unitsFahrenheit)
   {
     clearEEPROM();
     saveEEPROMSettings();
     return;
   }
+  */
 
   serialSpeed = sb2.serialSpeed;
   activeProfileIndex = sb2.activeProfileIndex;
@@ -312,7 +318,7 @@ static void restoreEEPROMSettings()
   settings.restore(PGain);
   settings.restore(IGain);
 #ifdef PI_CONTROLLER
-  DGain =makeDecimal<3>(0.0);
+  DGain = makeDecimal<3>(0.0);
 #else // PID controller  
   settings.restore(DGain);
 #endif  

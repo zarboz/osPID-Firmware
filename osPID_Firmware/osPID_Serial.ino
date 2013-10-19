@@ -60,7 +60,7 @@ Command list:
   M? #0-1 -- set the loop to manual/automatic Mode: 0 = manual, 1 = automatic
 
   N? #String -- clear the profile buffer and give it a Name, or query 
-     the Name of the active profile
+     the Names of the uploaded profiles
 
   O? #Number -- set Output value
 
@@ -75,7 +75,7 @@ Command list:
    
   p? #Number -- set P gain
   
-  Q -- Query -- returns status lines: "S {setpoint}", "I {input}", 
+  Q -- Query -- returns status lines: "T {alarm status}", "S {setpoint}", "I {input}", 
     "O {output}" plus "N {profile name}" "P {profile step, ... as above}" 
     if a profile is active or else "A 1" if currently auto-tuning
     and "A 0" if the auto-tuner is off
@@ -143,7 +143,7 @@ void setupSerial()
 
   Serial.end();
   unsigned int kbps = baudRate(serialSpeed);
-  Serial.begin(kbps * 100);
+  Serial.begin((long)kbps * 100);
 }
 
 static const char * parseDecimal(const char *str, long *out, byte *decimals)
@@ -387,9 +387,9 @@ static void cmdPoke(int address, byte val)
 
 static void cmdIdentify()
 {
-  serialPrint(F("Unit \""));
-  serialPrintln(reinterpret_cast<const __FlashStringHelper *>(PcontrollerName));
-  serialPrintln("\"\nVersion ");
+  serialPrint(F("Unit: "));
+  serialPrint(reinterpret_cast<const __FlashStringHelper *>(PcontrollerName));
+  serialPrint(F(" Version: "));
   serialPrintln(reinterpret_cast<const __FlashStringHelper *>(Pversion));
 }
 
@@ -406,30 +406,34 @@ static void serialPrintProfileName(byte profileIndex)
   serialPrint(char('"'));
 }
 
-static void cmdQuery()
+static void query(char cmd)
 {
-  serialCommandBuffer[0] = 'S';
+  serialCommandBuffer[0] = cmd;
   serialCommandBuffer[1] = '?';
   serialCommandBuffer[2] = '\n';
   serialCommandLength = 3;
-  processSerialCommand();        // S?
-  serialCommandBuffer[0] = 'I';
-  processSerialCommand();        // I?
-  serialCommandBuffer[0] = 'O';
-  processSerialCommand();        // O?
+  processSerialCommand();        
+}
+
+static void cmdQuery()
+{
+  query('T');
+  query('S');
+  query('I');
+  query('O');
   
   if (runningProfile)
   {
-    serialCommandBuffer[0] = 'N';
-    processSerialCommand();        // N?
-    serialCommandBuffer[0] = 'P';
-    processSerialCommand();        // P?
+    query('N');
+    query('P');      
   }
   else
   {
-    serialCommandBuffer[0] = 'A';
-    processSerialCommand();        // A?
+    query('A');
   }
+  serialCommandBuffer[0] = 'Q';
+  serialCommandBuffer[1] = '\0';
+  serialCommandLength = 1;
 }
 
 static void cmdExamineSettings()
@@ -438,6 +442,8 @@ static void cmdExamineSettings()
   serialPrint(F("EEPROM checksum: "));
   ospSettingsHelper::eepromRead(0, crc16);
   serialPrintln(crc16);
+  
+  Serial.println();
 
   if (modeIndex == AUTOMATIC)
     serialPrintln(F("PID mode"));
@@ -445,9 +451,11 @@ static void cmdExamineSettings()
     serialPrintln(F("Manual mode"));
 
   if (ctrlDirection == DIRECT)
-    serialPrint(F("Direct action"));
+    serialPrintln(F("Direct action"));
   else
-    serialPrint(F("Reverse action"));
+    serialPrintln(F("Reverse action"));
+    
+  Serial.println();
 
   // write out the setpoints, with a '*' next to the active one
   for (byte i = 0; i < 4; i++)
@@ -456,7 +464,7 @@ static void cmdExamineSettings()
       serialPrint('*');
     else
       serialPrint(' ');
-    serialPrint(F("SP"));
+    serialPrint(F("Sv"));
     serialPrint(char('1' + i));
     serialPrintFcolon();
     serialPrint(setPoints[i]);
@@ -465,16 +473,17 @@ static void cmdExamineSettings()
 #else
     serialPrint(FdegFahrenheit());
 #endif
-    if (i & 1 == 0)
-      serialPrint('\t');
+    if (i & 1)
+      Serial.println();
     else
-      serialPrint('\n');
+      serialPrint('\t');
   }
 
   Serial.println();
 
   serialPrint(F("Comm speed (bps): "));
   serialPrint(baudRate(serialSpeed));
+  serialPrintln(F("00"));
 
   serialPrint(F("Power-on: "));
   switch (powerOnBehavior)
@@ -497,7 +506,7 @@ static void cmdExamineSettings()
   serialPrintln(aTuneStep);
   serialPrintFAutotuner(); serialPrint(F("noise size: "));
   serialPrintln(aTuneNoise);
-  serialPrintFAutotuner(); serialPrint(F("look-back: "));
+  serialPrintFAutotuner(); serialPrint(F("look back: "));
   serialPrintln(aTuneLookBack);
 
   Serial.println();
@@ -507,6 +516,8 @@ static void cmdExamineSettings()
   serialPrintDeviceFloatSettings(true);
   // same for integer settings, if any
 
+  Serial.println();
+  
   serialPrint(F("Out"));
   //serialPrintFCalibrationData();  
   serialPrintDeviceFloatSettings(false);
@@ -627,7 +638,7 @@ PROGMEM SerialCommandParseData commandParseData[] =
   { 'W', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'X', ARGS_NONE },
   { 'Y', ARGS_NONE },
-  { 'a', ARGS_THREE_NUMBERS },
+  { 'a', ARGS_THREE_NUMBERS | ARGS_FLAG_QUERYABLE },
   { 'b', ARGS_THREE_NUMBERS | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
   { 'c', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'd', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
@@ -676,8 +687,8 @@ static byte argsForMnemonic(char mnemonic)
 
   
 // this is the entry point to the serial command processor: it is called
-// when a '\n' has been received over the serial connection, and therefore
-// a full command is buffered in serialCommandBuffer
+// when '\n' or '\r' has been received over the serial connection, and therefore
+// a full command is buffered in serialCommandBuffer, terminating in '\n'
 static void processSerialCommand()
 {
   const char *p = &serialCommandBuffer[1], *p2;
@@ -694,9 +705,9 @@ static void processSerialCommand()
     goto out_EINV;
 
   if ((argDescriptor & ARGS_FLAG_QUERYABLE) && (*p == '?'))
-  {
+  {  
     // this is a query
-    if (p[1] != '\n' && !(p[1] == '\r' && p[2] == '\n'))
+    if (p[1] != '\n')
       goto out_EINV;
 
     switch (serialCommandBuffer[0])
@@ -705,8 +716,10 @@ static void processSerialCommand()
       serialPrintln(tuning);
       break;
     case 'a':
-      serialPrintln(aTuneStep);
-      serialPrintln(aTuneNoise);
+      serialPrint(aTuneStep);
+      serialPrint(' ');
+      serialPrint(aTuneNoise);
+      serialPrint(' ');
       serialPrintln(aTuneLookBack);
       break;
     case 'B':
@@ -738,9 +751,16 @@ static void processSerialCommand()
       serialPrintln(modeIndex);
       break;
     case 'N':
+    /*
       if (!runningProfile)
         goto out_EINV;
       serialPrintProfileName(activeProfileIndex);
+    */
+      for (byte profileIndex = 0; profileIndex < 3; profileIndex++)
+      {
+        serialPrintProfileName(profileIndex);
+        serialPrint(' ');
+      }
       Serial.println();
       break;
     case 'O':
@@ -753,7 +773,6 @@ static void processSerialCommand()
     case 'P':
       if (!runningProfile)
         goto out_EINV;
-      serialPrint(F("P "));
       serialPrint(currentProfileStep);
       serialPrint(' ');
       serialPrint(profileState.stepType);
@@ -804,7 +823,7 @@ static void processSerialCommand()
     default:
       goto out_EINV;
     }
-    goto out_OK_NO_ACK;
+    goto out_OK;
   }
 
 #define CHECK_SPACE()                                   \
@@ -885,7 +904,7 @@ static void processSerialCommand()
   {
   case 'A': // stop/start auto-tuner
     if ((tuning ^ (byte) i1) == 0) // autotuner already on/off
-      goto out_OK; // no EEPROM writeback needed
+      goto out_ACK; // no EEPROM writeback needed
     tuning = i1;
     if (tuning)
       startAutoTune();
@@ -909,7 +928,7 @@ static void processSerialCommand()
       stopProfile();
     else
       goto out_EMOD;
-    goto out_OK; // no EEPROM writeback needed
+    goto out_ACK; // no EEPROM writeback needed
   case 'c': // set the comm speed
     if (cmdSetSerialSpeed(i1)) // since this resets the interface, just return
       return;
@@ -927,14 +946,14 @@ static void processSerialCommand()
   case 'E': // execute a profile by name
     if (!cmdStartProfile(p))
       goto out_EINV;
-    goto out_OK; // no EEPROM writeback needed
+    goto out_ACK; // no EEPROM writeback needed
   case 'e': // execute a profile by number
     if (tuning || runningProfile || modeIndex != AUTOMATIC)
       goto out_EMOD;
 
     activeProfileIndex = i1;
     startProfile();
-    goto out_OK; // no EEPROM writeback needed
+    goto out_ACK; // no EEPROM writeback needed
   case 'I': // directly set the input command
     goto out_EMOD; // (I don't think so)
   case 'i': // set the I gain
@@ -953,12 +972,12 @@ static void processSerialCommand()
 #ifndef ATMEGA_32kB_FLASH  
   case 'K': // memory peek
     cmdPeek(i1);
-    goto out_OK; // no EEPROM writeback needed
+    goto out_ACK; // no EEPROM writeback needed
   case 'k': // memory poke
     BOUNDS_CHECK(i1, 0, 255);
 
     cmdPoke(i2, i1);
-    goto out_OK; // no EEPROM writeback needed
+    goto out_ACK; // no EEPROM writeback needed
 #endif    
   case 'l': // set trip lower limit
     {
@@ -1013,7 +1032,7 @@ static void processSerialCommand()
     break;
   case 'Q': // query current status
     cmdQuery();
-    goto out_OK; // no EEPROM writeback needed
+    goto out_ACK; // no EEPROM writeback needed
   case 'R': // set the controller action direction
     ctrlDirection = i1;
     myPID.SetControllerDirection(i1);
@@ -1025,13 +1044,14 @@ static void processSerialCommand()
     clearEEPROM();
     serialPrintln(F("Memory marked for reset."));
     serialPrintln(F("Reset the unit to complete."));
-    goto out_OK; // no EEPROM writeback needed or wanted!
+    goto out_ACK; // no EEPROM writeback needed or wanted!
   case 'S': // change the setpoint
     {
       if (tuning)
         goto out_EMOD;
-      if (!trySetTemp(&setPoints[setPointIndex], i1, d1))      
+      if (!trySetTemp(&displaySetpoint, i1, d1))      
         goto out_EINV;
+      setPoints[setPointIndex] = displaySetpoint;
       updateActiveSetPoint();
     }
     break;
@@ -1046,19 +1066,19 @@ static void processSerialCommand()
 #ifndef SILENCE_BUZZER    
     buzzOff;
 #endif    
-    goto out_OK; // no EEPROM writeback needed
+    goto out_ACK; // no EEPROM writeback needed
   case 't': // set trip auto-reset
     tripAutoReset = i1;
     break;
   case 'u': // set trip upper limit
     {
-      if (!trySetTemp(&lowerTripLimit, i1, d1))
+      if (!trySetTemp(&upperTripLimit, i1, d1))
         goto out_EINV;
     }
     break;
   case 'V': // save the profile buffer to EEPROM
     saveEEPROMProfile(i1);
-    goto out_OK; // no EEPROM writeback needed
+    goto out_ACK; // no EEPROM writeback needed
   case 'W': // set the output window size in seconds
     ospDecimalValue<1> window;
     window = makeDecimal<1>(i1, d1);
@@ -1068,13 +1088,13 @@ static void processSerialCommand()
     break;
   case 'X': // examine: dump the controller settings
     cmdExamineSettings();
-    goto out_OK; // no EEPROM writeback needed
+    goto out_ACK; // no EEPROM writeback needed
   case 'x': // examine a profile: dump a description of the give profile
     cmdExamineProfile(i1);
-    goto out_OK; // no EEPROM writeback needed
+    goto out_ACK; // no EEPROM writeback needed
   case 'Y': // identify
     cmdIdentify();
-    goto out_OK; // no EEPROM writeback needed
+    goto out_ACK; // no EEPROM writeback needed
   default:
     goto out_EINV;
   }
@@ -1083,21 +1103,28 @@ static void processSerialCommand()
 
   // we wrote a setting of some sort: schedule an EEPROM writeback
   markSettingsDirty();
-out_OK:
-  serialPrint(F("ACK::"));
+out_ACK:
   // acknowledge command by printing it back out
-  serialPrintln(serialCommandBuffer);
+  serialCommandBuffer[serialCommandLength] = '\0';
+  serialPrint(serialCommandBuffer);
+  serialPrintln(F("::ACK"));
   return;
   
-out_OK_NO_ACK:  
+out_OK:  
+  Serial.write(char(serialCommandBuffer[0]));
+  Serial.write('?');
   serialPrintln(F("::OK"));
   return;
 
 out_EINV:
+  serialCommandBuffer[serialCommandLength] = '\0';
+  serialPrint(serialCommandBuffer);
   serialPrintln(F("::EINV"));
   return;
 
 out_EMOD:
+  serialCommandBuffer[serialCommandLength] = '\0';
+  serialPrint(serialCommandBuffer);
   serialPrintln(F("::EMOD"));
   return;
 }

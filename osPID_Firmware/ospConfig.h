@@ -4,12 +4,12 @@
 // global defines file included in the header of all .ino files
 
 // the controller name displayed in the startup banner and the identifY response
-#define CONTROLLER_NAME "Stripboard osPID"
-PROGMEM const char PcontrollerName[] = CONTROLLER_NAME;
+const char CONTROLLER_NAME[] = "Stripboard_osPID";
+PROGMEM const char PcontrollerName[] = "Stripboard_osPID";
 
 // the version tag displayed in the startup banner and the identifY response
-#define VERSION_TAG "v1.0"
-PROGMEM const char Pversion[] = VERSION_TAG;
+const char VERSION_TAG[] = "v1.0";
+PROGMEM const char Pversion[] = "v1.0";
 
 // pin assignment for LCD display
 enum

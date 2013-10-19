@@ -1,4 +1,4 @@
-/* This file contains the setup() and loop() logic for the controller. */
+//* This file contains the setup() and loop() logic for the controller. */
 
 #include <Arduino.h>
 #include <LiquidCrystal.h>
@@ -62,6 +62,7 @@ ospSimulator theInputDevice;
 
 // we use the LiquidCrystal library to drive the LCD screen
 LiquidCrystal theLCD(lcdRsPin, lcdEnablePin, lcdD0Pin, lcdD1Pin, lcdD2Pin, lcdD3Pin);
+extern void __attribute__ ((noinline)) LCDprintln(const PROGMEM char* s);
 
 // our AnalogButton library provides debouncing and interpretation
 // of the analog-multiplexed button channel
@@ -160,9 +161,9 @@ extern void drawNotificationCursor(char icon);
 // some constants in flash memory, for reuse
 
 #ifndef UNITS_FAHRENHEIT
-const __FlashStringHelper *FdegCelsius() { return F(" \272C"); }
+const __FlashStringHelper *FdegCelsius() { return F(" °C"); }
 #else
-const __FlashStringHelper *FdegFahrenheit() { return F(" \272F"); }
+const __FlashStringHelper *FdegFahrenheit() { return F(" °F"); }
 #endif
 
 const PROGMEM char Pprofile[] = "Profile ";
@@ -179,7 +180,7 @@ enum
 #ifndef STANDALONE_CONTROLLER
 byte serialSpeed = SERIAL_SPEED_9p6k;
 
-PROGMEM unsigned int serialSpeedTable[7] = { 96, 192, 384, 576, 1152 };
+PROGMEM unsigned int serialSpeedTable[5] = { 96, 192, 384, 576, 1152 };
 
 unsigned int __attribute__((noinline)) baudRate(byte i)
 {
@@ -655,18 +656,33 @@ void loop()
   byte avail = Serial.available();
   while (avail--)
   {
-    char ch = Serial.read();
+    char ch = Serial.read();  
+    
+    if (
+      (serialCommandLength == 0) &&
+      ((ch == '\n') || (ch == '\r') || (ch == '\0'))
+    )
+      continue;
+      
     if (serialCommandLength < 32)
     {
       // throw away excess characters
       serialCommandBuffer[serialCommandLength++] = ch;
     }
 
-    if (ch == '\n')
+    if ((ch == '\n') || (ch == '\r'))
     {
       // a complete command has been received
-      serialCommandBuffer[serialCommandLength] = '\0';
+      serialCommandBuffer[serialCommandLength - 1] = '\n';
       drawNotificationCursor('*');
+
+/*
+Serial.print(F("Arduino hears:"));
+Serial.write('"');
+Serial.print(serialCommandBuffer);
+Serial.write('"');
+Serial.println();
+*/
 
       processSerialCommand();
       
