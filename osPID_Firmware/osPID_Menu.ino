@@ -645,10 +645,10 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     break;
 #endif    
   case ITEM_POWERON_DISABLE:
-    LCDprintln(PSTR("Disable"));
+    LCDprintln(PSTR("Manual Control"));
     break;
   case ITEM_POWERON_CONTINUE:
-    LCDprintln(PSTR("Continue"));
+    LCDprintln(PSTR("Hold Set Point"));
     break;
   case ITEM_POWERON_RESUME_PROFILE:
     LCDprintln(PSTR("Resume Profile"));

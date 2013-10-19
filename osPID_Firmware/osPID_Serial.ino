@@ -492,8 +492,8 @@ static void cmdExamineSettings()
     serialPrintln(F("go to manual"));
     break;
   case POWERON_RESUME_PROFILE:
-    serialPrint(F("continue profile or "));
-    // run on into next case with no break;
+    serialPrintln(F("resume profile"));
+    break;
   case POWERON_CONTINUE_LOOP:
     serialPrintln(F("hold last setpoint"));
     break;
@@ -780,6 +780,7 @@ static void processSerialCommand()
       serialPrint(profileState.stepDuration);
       serialPrint(' ');
       serialPrint(profileState.targetSetpoint);
+      serialPrint(' ');
       if (
         (profileState.stepType == ospProfile::STEP_RAMP_TO_SETPOINT) || 
         (profileState.stepType == ospProfile::STEP_JUMP_TO_SETPOINT) ||
