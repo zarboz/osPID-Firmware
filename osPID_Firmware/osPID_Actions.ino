@@ -50,15 +50,22 @@ static void startAutoTune()
   if (aTuneStep < s)
     s = aTuneStep;
   aTune.SetOutputStep(double(s));
+  
+  switch (aTuneMethod) // or any other PI method
+  {
+    case ZIEGLER_NICHOLS_PID: 
+      // and all other PID controllers
+      break;
+    case ZIEGLER_NICHOLS_PI:
+    default:  
+      // ensure that derivative gain is zero
+      myPID.SetTunings(aTune.GetKp(), aTune.GetKi(), 0.0);
+  }
  
   myPID.SetMode(MANUAL);
+  aTune.SetControlType(aTuneMethod); 
   aTune.SetNoiseBand(double(aTuneNoise));
   aTune.SetLookbackSec(aTuneLookBack);
-#ifdef PI_CONTROLLER    
-  aTune.SetControlType(0); // the default
-#else // PID controller
-  aTune.SetControlType(1);
-#endif  
   tuning = true;
 }
 

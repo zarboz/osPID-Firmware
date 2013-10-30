@@ -27,13 +27,14 @@
 *      6 |    2 | I gain
 *      8 |    2 | D gain
 *     10 |    8 | 4 setpoints
-*     18 |    2 | Autotune step parameter
-*     20 |    2 | Autotune noise parameter
-*     22 |    2 | Autotune look-back parameter
-*     24 |    2 | Manual output setting
-*     26 |    2 | Lower trip limit
-*     28 |    2 | Upper trip limit
-*     30 |    1 | EEPROM version identifier
+*     18 |    1 | Auto tune method
+*     19 |    2 | Autotune step parameter
+*     21 |    2 | Autotune noise parameter
+*     23 |    2 | Autotune look-back parameter
+*     25 |    2 | Manual output setting
+*     27 |    2 | Lower trip limit
+*     29 |    2 | Upper trip limit
+*     31 |    1 | EEPROM version identifier
 *     31 |   41 | (free)
 *     72 |   64 | Input device setting space
 *    136 |   64 | Output device setting space
@@ -73,7 +74,7 @@
 *******************************************************************************/
 
 // UPDATE THIS VALUE EVERY TIME THE EEPROM LAYOUT CHANGES IN AN INCOMPATIBLE WAY
-enum { EEPROM_STORAGE_VERSION = 1 };
+enum { EEPROM_STORAGE_VERSION = 2 };
 
 enum 
 {
@@ -85,14 +86,15 @@ enum
   SETTINGS_D_OFFSET = 8,
   SETTINGS_SP_OFFSET = 10,
   NR_SETPOINTS = 4,
-  SETTINGS_AT_STEP_OFFSET = 18,
-  SETTINGS_AT_NOISE_OFFSET = 20,
-  SETTINGS_AT_LOOKBACK_OFFSET = 22,
-  SETTINGS_OUTPUT_OFFSET = 24,
-  SETTINGS_LOWER_TRIP_OFFSET = 26,
-  SETTINGS_UPPER_TRIP_OFFSET = 28,
-  SETTINGS_VERSION_OFFSET = 30,
-  // free space from 31 to 71
+  SETTINGS_AUTO_TUNE_METHOD_OFFSET = 18,
+  SETTINGS_AT_STEP_OFFSET = 19,
+  SETTINGS_AT_NOISE_OFFSET = 21,
+  SETTINGS_AT_LOOKBACK_OFFSET = 23,
+  SETTINGS_OUTPUT_OFFSET = 25,
+  SETTINGS_LOWER_TRIP_OFFSET = 27,
+  SETTINGS_UPPER_TRIP_OFFSET = 29,
+  SETTINGS_VERSION_OFFSET = 31,
+  // free space from 32 to 71
   INPUT_DEVICE_SETTINGS_OFFSET = 72,
   OUTPUT_DEVICE_SETTINGS_OFFSET = 168,
   SETTINGS_CRC_LENGTH = 198
@@ -214,16 +216,14 @@ union SettingsByte1
   byte byteVal;
 };
 
-extern byte serialSpeed;
-
 union SettingsByte2 
 {
   struct 
   {
-    byte serialSpeed : 3;
     byte activeProfileIndex : 2;
     byte inputType : 2;
     byte unitsFahrenheit : 1;
+    // unused: 3
   };
   byte byteVal;
 };
@@ -244,7 +244,6 @@ static void saveEEPROMSettings()
   settings.save(sb1.byteVal);
 
   sb2.byteVal = 0;
-  sb2.serialSpeed = serialSpeed;
   sb2.activeProfileIndex = activeProfileIndex;
   sb2.inputType = inputType;
   sb2.unitsFahrenheit = unitsFahrenheit;
@@ -257,6 +256,7 @@ static void saveEEPROMSettings()
   for (byte i = 0; i < NR_SETPOINTS; i++)
     settings.save(setPoints[i]);
 
+  settings.save(aTuneMethod);
   settings.save(aTuneStep);
   settings.save(aTuneNoise);
   settings.save(aTuneLookBack);
@@ -302,7 +302,6 @@ static void restoreEEPROMSettings()
   }
   */
 
-  serialSpeed = sb2.serialSpeed;
   activeProfileIndex = sb2.activeProfileIndex;
   inputType = sb2.inputType;
 
@@ -328,6 +327,7 @@ static void restoreEEPROMSettings()
   updateActiveSetPoint();
   displaySetpoint = setPoints[0];
 
+  settings.restore(aTuneMethod);
   settings.restore(aTuneStep);
   settings.restore(aTuneNoise);
   settings.restore(aTuneLookBack);

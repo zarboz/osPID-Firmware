@@ -93,12 +93,6 @@ enum
   ITEM_INPUT_THERMOCOUPLE,
   ITEM_INPUT_SIMULATOR,
 
-  ITEM_COMM_9p6k,
-  ITEM_COMM_19p2k,
-  ITEM_COMM_38p4k,
-  ITEM_COMM_57p6k,
-  ITEM_COMM_115k,
-
   ITEM_POWERON_DISABLE,
   ITEM_POWERON_CONTINUE,
   ITEM_POWERON_RESUME_PROFILE,
@@ -130,9 +124,6 @@ PROGMEM const byte inputMenuItems[3] = { ITEM_INPUT_THERMISTOR, ITEM_INPUT_ONEWI
 #else
 PROGMEM const byte inputMenuItems[1] = { ITEM_SIMULATOR };
 #endif
-#ifndef STANDALONE_CONTROLLER
-PROGMEM const byte commMenuItems[5] = { ITEM_COMM_9p6k, ITEM_COMM_19p2k, ITEM_COMM_38p4k, ITEM_COMM_57p6k, ITEM_COMM_115k };
-#endif  
 PROGMEM const byte poweronMenuItems[3] = { ITEM_POWERON_DISABLE, ITEM_POWERON_CONTINUE, ITEM_POWERON_RESUME_PROFILE };
 PROGMEM const byte tripMenuItems[4] = { ITEM_TRIP_ENABLED, ITEM_LOWER_TRIP_LIMIT, ITEM_UPPER_TRIP_LIMIT, ITEM_TRIP_AUTORESET };
 PROGMEM const byte resetRomMenuItems[2] = { ITEM_RESET_ROM_NO, ITEM_RESET_ROM_YES };
@@ -149,7 +140,6 @@ PROGMEM const MenuItem menuData[MENU_COUNT + 1] =
   { sizeof(tripMenuItems), 0, tripMenuItems               } ,
   { sizeof(inputMenuItems), 0, inputMenuItems             } ,
   { sizeof(poweronMenuItems), 0, poweronMenuItems         } ,
-  { sizeof(commMenuItems), 0, commMenuItems               } ,
   { sizeof(resetRomMenuItems), 0, resetRomMenuItems       } 
 };
 
@@ -632,18 +622,6 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     LCDprintln(PSTR("Simulation"));
     break;
 #endif    
-#ifndef STANDALONE_CONTROLLER
-  case ITEM_COMM_9p6k:
-  case ITEM_COMM_19p2k:
-  case ITEM_COMM_38p4k:
-  case ITEM_COMM_57p6k:
-  case ITEM_COMM_115k:
-    kbps = baudRate(item - ITEM_COMM_9p6k);
-    theLCD.print(kbps);
-    theLCD.print(F("00 baud"));
-    LCDspc(6 + (item == ITEM_COMM_9p6k) - (item == ITEM_COMM_115k));
-    break;
-#endif    
   case ITEM_POWERON_DISABLE:
     LCDprintln(PSTR("Manual Control"));
     break;
@@ -1015,11 +993,6 @@ static void okKeyPress()
     case ITEM_INPUT_MENU:
       menuState.highlightedItemMenuIndex = inputType;
       break;
-#ifndef STANDALONE_CONTROLLER      
-    case ITEM_COMM_MENU:
-      menuState.highlightedItemMenuIndex = serialSpeed;
-      break;
-#endif      
     case ITEM_POWERON_MENU:
       menuState.highlightedItemMenuIndex = powerOnBehavior;
       break;
@@ -1110,22 +1083,6 @@ static void okKeyPress()
     // return to prior menu
     backKeyPress();
     break;
-
-#ifndef STANDALONE_CONTROLLER
-  case ITEM_COMM_9p6k:
-  case ITEM_COMM_19p2k:
-  case ITEM_COMM_38p4k:
-  case ITEM_COMM_57p6k:
-  case ITEM_COMM_115k:
-    serialSpeed = (item - ITEM_COMM_9p6k);
-    Serial.flush();
-    setupSerial();
-    markSettingsDirty();
-
-    // return to the prior menu
-    backKeyPress();
-    break;
-#endif    
 
   case ITEM_POWERON_DISABLE:
   case ITEM_POWERON_CONTINUE:

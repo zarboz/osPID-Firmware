@@ -38,7 +38,7 @@ Command list:
   
   C -- cancel profile execution
 
-  c? #Integer -- set the Comm speed, in kbps
+  c? -- query the Comm speed, in kbps; it is fixed so can't set it
 
   d? #Number -- set D gain
 
@@ -58,6 +58,8 @@ Command list:
   l? #Number -- query / set alarm Lower temperature limit
 
   M? #0-1 -- set the loop to manual/automatic Mode: 0 = manual, 1 = automatic
+
+  m? #Integer -- select or query auto tune Method
 
   N? #String -- clear the profile buffer and give it a Name, or query 
      the Names of the uploaded profiles
@@ -98,8 +100,6 @@ Command list:
 
   W? -- query output Window size in seconds or set Window size
 
-  X -- eXamine: dump the unit's settings
-
   x #0-2 -- eXamine profile: dump profile N
 
   Y -- identifY -- returns two lines: "osPid vX.YYtag" and "Unit {unitName}"
@@ -112,6 +112,8 @@ Codes removed on Arduinos with 32kB flash memory:
 
   k #Integer #Integer -- poKe at memory address: the first number is the address,
   the second is the byte to write there, in decimal
+  
+  X -- eXamine: dump the unit's settings
 
 Response codes:
   OK -- success
@@ -137,13 +139,8 @@ or
 // not static because called from elsewhere
 void setupSerial()
 {
-#ifndef ATMEGA_32kB_FLASH
-  ospAssert((serialSpeed >= 0) && (serialSpeed < 7));
-#endif  
-
   Serial.end();
-  unsigned int kbps = baudRate(serialSpeed);
-  Serial.begin((long)kbps * 100);
+  Serial.begin(9600);
 }
 
 static const char * parseDecimal(const char *str, long *out, byte *decimals)
@@ -312,29 +309,6 @@ static void serialPrintDeviceFloatSettings(bool inputDevice)
   }
 }
 
-static bool cmdSetSerialSpeed(const int& speed)
-{
-  for (byte i = 0; i < (sizeof(serialSpeedTable) / sizeof(serialSpeedTable[0])); i++)
-  {
-    unsigned int s = baudRate(i);
-    if (s == speed)
-    {
-      // this is a speed we can do: report success, and then reset the serial
-      // interface to the new speed
-      serialSpeed = i;
-      serialPrintln(F("OK"));
-      Serial.flush();
-
-      // we have to report success _first_, because changing the serial speed will
-      // break the connection!
-      markSettingsDirty();
-      setupSerial();
-      return true;
-    }
-  }
-  return false;
-}
-
 static bool cmdStartProfile(const char *name)
 {
   for (byte i = 0; i < NR_PROFILES; i++)
@@ -436,6 +410,7 @@ static void cmdQuery()
   serialCommandLength = 1;
 }
 
+#if !defined ATMEGA_32kB_FLASH
 static void cmdExamineSettings()
 {
   unsigned int crc16;
@@ -481,9 +456,7 @@ static void cmdExamineSettings()
 
   Serial.println();
 
-  serialPrint(F("Comm speed (bps): "));
-  serialPrint(baudRate(serialSpeed));
-  serialPrintln(F("00"));
+  serialPrintln(F("Comm speed (bps): 9600"));
 
   serialPrint(F("Power-on: "));
   switch (powerOnBehavior)
@@ -502,6 +475,8 @@ static void cmdExamineSettings()
   Serial.println();
 
   // auto-tuner settings
+  serialPrintFAutotuner(); serialPrint(F("method: "));
+  serialPrintln(aTuneMethod);
   serialPrintFAutotuner(); serialPrint(F("step size: "));
   serialPrintln(aTuneStep);
   serialPrintFAutotuner(); serialPrint(F("noise size: "));
@@ -523,6 +498,7 @@ static void cmdExamineSettings()
   serialPrintDeviceFloatSettings(false);
   // same for integer settings, if any
 }
+#endif // if !defined ATMEGA_32kB_FLASH
 
 static void serialPrintProfileState(byte profileIndex, byte stepIndex)
 {
@@ -640,7 +616,7 @@ PROGMEM SerialCommandParseData commandParseData[] =
   { 'Y', ARGS_NONE },
   { 'a', ARGS_THREE_NUMBERS | ARGS_FLAG_QUERYABLE },
   { 'b', ARGS_THREE_NUMBERS | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
-  { 'c', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
+  { 'c', ARGS_FLAG_QUERYABLE },
   { 'd', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'e', ARGS_ONE_NUMBER | ARGS_FLAG_PROFILE_NUMBER },
   { 'i', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
@@ -648,6 +624,7 @@ PROGMEM SerialCommandParseData commandParseData[] =
   { 'k', ARGS_TWO_NUMBERS },
 #endif
   { 'l', ARGS_ONE_NUMBER | ARGS_FLAG_QUERYABLE },
+  { 'm', ARGS_ONE_NUMBER | ARGS_FLAG_QUERYABLE },
   { 'o', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'p', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'r', ARGS_ONE_NUMBER },
@@ -726,8 +703,7 @@ static void processSerialCommand()
       serialPrintlnTemp(theInputDevice.getCalibration());
       break;
     case 'c':
-      serialPrint(baudRate(serialSpeed));
-      serialPrintln("00");
+      serialPrintln("9600");
       break;
     case 'd':
       serialPrintln(DGain);
@@ -749,6 +725,9 @@ static void processSerialCommand()
       break;
     case 'M':
       serialPrintln(modeIndex);
+      break;
+    case 'm':
+      serialPrintln(aTuneMethod);
       break;
     case 'N':
     /*
@@ -930,20 +909,12 @@ static void processSerialCommand()
     else
       goto out_EMOD;
     goto out_ACK; // no EEPROM writeback needed
-  case 'c': // set the comm speed
-    if (cmdSetSerialSpeed(i1)) // since this resets the interface, just return
-      return;
-    goto out_EINV;
   case 'd': // set the D gain
-#ifdef PI_CONTROLLER
-    goto out_EMOD;
-#else // PID controller    
     if (tuning)
       goto out_EMOD;
     if (!trySetGain(&DGain, i1, d1))
       goto out_EINV;
     break;
-#endif
   case 'E': // execute a profile by name
     if (!cmdStartProfile(p))
       goto out_EINV;
@@ -994,6 +965,15 @@ static void processSerialCommand()
     if (modeIndex == MANUAL)
       setOutputToManualOutput();
     myPID.SetMode(i1);
+    break;
+  case 'm': // select auto tune method
+    // turn off auto tune
+    if ((i1 < 0) || (i1 > LAST_AUTO_TUNE_METHOD))
+      goto out_EINV;
+    if (tuning)
+      stopAutoTune();
+    tuning = false;
+    aTuneMethod = i1;
     break;
   case 'N': // clear and name the profile buffer
     if (strlen(p) > ospProfile::NAME_LENGTH)
@@ -1088,8 +1068,12 @@ static void processSerialCommand()
     displayWindow = window;
     break;
   case 'X': // examine: dump the controller settings
+#if !defined ATMEGA_32kB_FLASH
     cmdExamineSettings();
     goto out_ACK; // no EEPROM writeback needed
+#else
+    goto out_EINV;
+#endif
   case 'x': // examine a profile: dump a description of the give profile
     cmdExamineProfile(i1);
     goto out_ACK; // no EEPROM writeback needed

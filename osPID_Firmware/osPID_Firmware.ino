@@ -133,9 +133,20 @@ enum
   POWERON_RESUME_PROFILE
 };
 
+// auto tune methods
+enum
+{
+  ZIEGLER_NICHOLS_PI = 0,
+  ZIEGLER_NICHOLS_PID,
+  LAST_AUTO_TUNE_METHOD = ZIEGLER_NICHOLS_PID
+};
+
 byte powerOnBehavior = POWERON_CONTINUE_LOOP;
 
 bool controllerIsBooting = true;
+
+// auto tune algorithm
+byte aTuneMethod = ZIEGLER_NICHOLS_PI;
 
 // the parameters for the autotuner
 ospDecimalValue<1> aTuneStep = { 200 };
@@ -167,27 +178,6 @@ const __FlashStringHelper *FdegFahrenheit() { return F(" °F"); }
 #endif
 
 const PROGMEM char Pprofile[] = "Profile ";
-
-enum 
-{
-  SERIAL_SPEED_9p6k = 0,
-  SERIAL_SPEED_19p2k,
-  SERIAL_SPEED_38p4k,
-  SERIAL_SPEED_57p6k,
-  SERIAL_SPEED_115k
-};
-
-#ifndef STANDALONE_CONTROLLER
-byte serialSpeed = SERIAL_SPEED_9p6k;
-
-PROGMEM unsigned int serialSpeedTable[5] = { 96, 192, 384, 576, 1152 };
-
-unsigned int __attribute__((noinline)) baudRate(byte i)
-{
-  return pgm_read_word_near(&serialSpeedTable[i]);
-}
-#endif
-
 
 char hex(byte b)
 {
@@ -434,11 +424,7 @@ static void completeAutoTune()
   // We're done, set the tuning parameters
   PGain = makeDecimal<3>(aTune.GetKp());
   IGain = makeDecimal<3>(aTune.GetKi());
-#ifdef PI_CONTROLLER  
-  DGain = makeDecimal<3>(0.0);
-#else // PID controller  
   DGain = makeDecimal<3>(aTune.GetKd());
-#endif  
 
   // set the PID controller to accept the new gain settings
   // use whatever direction of control is currently set
