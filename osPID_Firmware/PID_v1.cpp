@@ -47,21 +47,21 @@ void PID::Compute()
    if(!inAuto) return;
    unsigned long now = millis();
    unsigned long timeChange = (now - lastTime);
-   if(timeChange>=(unsigned long)SampleTime)
+   if (timeChange>=(unsigned long)SampleTime)
    {
       /*Compute all the working error variables*/
       double input = *myInput;
       double error = *mySetpoint - input;
       ITerm+= (ki * error);
-      if(ITerm > outMax) ITerm= outMax;
-      else if(ITerm < outMin) ITerm= outMin;
+      if (ITerm > outMax) ITerm= outMax;
+      else if (ITerm < outMin) ITerm= outMin;
       double dInput = (input - lastInput);
  
       /*Compute PID Output*/
       double output = kp * error + ITerm- kd * dInput;
       
-      if(output > outMax) output = outMax;
-      else if(output < outMin) output = outMin;
+      if (output > outMax) output = outMax;
+      else if (output < outMin) output = outMin;
       *myOutput = output;
 
       /*Remember some variables for next time*/
@@ -120,17 +120,17 @@ void PID::SetSampleTime(int NewSampleTime)
 **************************************************************************/
 void PID::SetOutputLimits(double Min, double Max)
 {
-   if(Min >= Max) return;
+   if (Min >= Max) return;
    outMin = Min;
    outMax = Max;
  
-   if(inAuto)
+   if (inAuto)
    {
-      if(*myOutput > outMax) *myOutput = outMax;
-      else if(*myOutput < outMin) *myOutput = outMin;
+      if (*myOutput > outMax) *myOutput = outMax;
+      else if (*myOutput < outMin) *myOutput = outMin;
       
-      if(ITerm > outMax) ITerm= outMax;
-      else if(ITerm < outMin) ITerm= outMin;
+      if (ITerm > outMax) ITerm= outMax;
+      else if (ITerm < outMin) ITerm= outMin;
    }
 }
 

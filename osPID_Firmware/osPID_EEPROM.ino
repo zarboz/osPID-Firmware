@@ -196,7 +196,9 @@ static bool checkEEPROMSettings()
   ospSettingsHelper::eepromRead(SETTINGS_CRC_OFFSET, storedCrc);
 
   if (calculatedCrc != storedCrc)
+  {
     return false;
+  }
 
   byte storedVersion;
   ospSettingsHelper::eepromRead(SETTINGS_VERSION_OFFSET, storedVersion);
@@ -340,13 +342,13 @@ static void restoreEEPROMSettings()
   
   settings.skipTo(INPUT_DEVICE_SETTINGS_OFFSET);
   theInputDevice.restoreSettings(settings);
-#ifndef USE_SIMULATOR
+#if !defined USE_SIMULATOR
   displayCalibration = theInputDevice.getCalibration();
 #endif
 
   settings.skipTo(OUTPUT_DEVICE_SETTINGS_OFFSET);
   theOutputDevice.restoreSettings(settings);
-#ifndef USE_SIMULATOR
+#if !defined USE_SIMULATOR
   displayWindow = theOutputDevice.getOutputWindowSeconds();
 #endif
 }
@@ -387,7 +389,8 @@ retry:
 
   unsigned int crcValue = settings.crcValue();
 
-  if (crcValue == 0xFFFFu && swizzle) {
+  if (crcValue == 0xFFFFu && swizzle) 
+  {
     // 0xFFFF is a reserved values in the status buffer, so take out the swizzle
     // and retry the save to generate a different CRC-16
     swizzle = 0x00;
@@ -405,7 +408,7 @@ static char getProfileNameCharAt(byte profileIndex, byte i)
                         + PROFILE_NAME_OFFSET
                         + i;
   char ch;
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
   ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
   ospAssert((i >= 0) && (i < ospProfile::NAME_LENGTH+1));
 #endif  
@@ -419,7 +422,7 @@ static void getProfileStepData(byte profileIndex, byte i, byte *type, unsigned l
   const int base = PROFILE_BLOCK_START_OFFSET
                     + profileIndex * PROFILE_BLOCK_LENGTH;
 
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
   ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
 #endif  
   ospSettingsHelper::eepromRead(base + PROFILE_STEP_TYPES_OFFSET + i, *type);
@@ -451,7 +454,9 @@ static byte profileIndexForCrc(unsigned int crc)
     profileCrc = getProfileCrc(i);
 
     if (crc == profileCrc)
+    {
       return i;
+    }
   }
   return 0xFF;
 }
@@ -471,7 +476,9 @@ static bool profileWasInterrupted()
     ospSettingsHelper::eepromRead(blockAddress + STATUS_BLOCK_CRC_OFFSET, crc);
 
     if (crc == 0xFFFFu) // not a valid profile CRC-16
+    {
       continue;
+    }
 
     byte profileIndex = profileIndexForCrc(crc);
     if (profileIndex == 0xFF)

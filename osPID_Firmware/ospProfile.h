@@ -1,4 +1,4 @@
-#ifndef OSPPROFILE_H
+#if !defined OSPPROFILE_H
 #define OSPPROFILE_H
 
 #include <Arduino.h>
@@ -18,8 +18,9 @@ public:
     STEP_SOAK_AT_VALUE = 1,
     STEP_JUMP_TO_SETPOINT = 2,
     STEP_WAIT_TO_CROSS = 3,
+    STEP_HOLD_UNTIL_CANCEL = 4,
 
-    LAST_VALID_STEP = STEP_WAIT_TO_CROSS,
+    LAST_VALID_STEP = STEP_HOLD_UNTIL_CANCEL,
     STEP_FLAG_BUZZER = 0x40,
     STEP_EEPROM_SWIZZLE = 0x80,
     STEP_INVALID = 0x7F,
@@ -43,11 +44,17 @@ public:
   bool addStep(byte type, unsigned long duration, ospDecimalValue<1> endpoint)
   {
     if (nextStep == NR_STEPS)
+    {
       return false;
+    }
     if (type & STEP_EEPROM_SWIZZLE)
+    {
       return false;
+    }
     if ((type & STEP_TYPE_MASK) > LAST_VALID_STEP)
+    {
       return false;
+    }
 
     stepTypes[nextStep] = type;
     stepDurations[nextStep] = duration;

@@ -1,5 +1,5 @@
 // the settings helper encapsulates CRC handling and space management for the card classes
-#ifndef OSPSETTINGSHELPER_H
+#if !defined OSPSETTINGSHELPER_H
 #define OSPSETTINGSHELPER_H
 
 #include <Arduino.h>

@@ -10,13 +10,13 @@
 //             Jeremiah Willcock (jewillco at osl.iu.edu)
 //             Andrew Lumsdaine (lums at osl.iu.edu)
 
-#ifndef BOOST_UTILITY_ENABLE_IF_HPP
+#if !defined BOOST_UTILITY_ENABLE_IF_HPP
 #define BOOST_UTILITY_ENABLE_IF_HPP
 
 // Even the definition of enable_if causes problems on some compilers,
 // so it's macroed out for all compilers that do not support SFINAE
 
-#ifndef BOOST_NO_SFINAE
+#if !defined BOOST_NO_SFINAE
 
 namespace boost
 {

@@ -1,4 +1,4 @@
-#ifndef OSPOUTPUTDEVICESSR_H
+#if !defined OSPOUTPUTDEVICESSR_H
 #define OSPOUTPUTDEVICESSR_H
 
 #include "ospIODevice.h"
@@ -23,7 +23,10 @@ public:
   ospOutputDeviceSsr() : 
     ospBaseOutputDevice(), 
     outputWindowSeconds((ospDecimalValue<1>){50}),
-    outputWindowMilliseconds(5000) // 5s OK for SSR depending on the load, needs to be longer for electromechanical relay
+    // default of output cycle length 5s 
+    // this is OK for SSR depending on the load
+    // needs to be longer for electromechanical relay
+    outputWindowMilliseconds(5000) 
   { 
   }
   

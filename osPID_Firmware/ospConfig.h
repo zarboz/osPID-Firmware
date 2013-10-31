@@ -1,7 +1,11 @@
-#ifndef OSPCONFIG_H
+#if !defined OSPCONFIG_H
 #define OSPCONFIG_H
 
 // global defines file included in the header of all .ino files
+
+/*
+ *          CONTROLLER IDENTITY
+ */
 
 // the controller name displayed in the startup banner and the identifY response
 const char CONTROLLER_NAME[] = "Stripboard_osPID";
@@ -10,6 +14,11 @@ PROGMEM const char PcontrollerName[] = "Stripboard_osPID";
 // the version tag displayed in the startup banner and the identifY response
 const char VERSION_TAG[] = "v1.0";
 PROGMEM const char Pversion[] = "v1.0";
+
+
+/*
+ *          HARDWARE  DEFINITIONS
+ */
 
 // pin assignment for LCD display
 enum
@@ -41,6 +50,11 @@ enum { buttonsPin = A4 };
 // pin assignment for buzzer
 enum { buzzerPin = A5 };
 
+
+/*
+ *          COMPILATION  OPTIONS
+ */
+
 // quiet mode (buzzer off) 
 #undef SILENCE_BUZZER
 
@@ -67,7 +81,21 @@ const bool unitsFahrenheit = false;
 // necessary omissions to compil on Atmega microcontrollers with 32 kB flash
 #define ATMEGA_32kB_FLASH
 
-// for longest options, #undef USE_SIMULATOR and SHORTER, #define UNITS_FAHRENHEIT
+// NB test compilation length using longest options: #undef USE_SIMULATOR and SHORTER, #define UNITS_FAHRENHEIT
+
+// available auto tune methods
+enum
+{
+  ZIEGLER_NICHOLS_PI = 0,
+  ZIEGLER_NICHOLS_PID,
+  LAST_AUTO_TUNE_METHOD = ZIEGLER_NICHOLS_PID
+};
+
+// default auto tune algorithm and parameters
+#define AUTO_TUNE_DEFAULT_METHOD                ZIEGLER_NICHOLS_PI
+#define AUTO_TUNE_DEFAULT_OUTPUT_STEP           20
+#define AUTO_TUNE_DEFAULT_NOISE_BAND_CELSIUS    0.5
+#define AUTO_TUNE_DEFAULT_LOOKBACK_SEC          10
 
 // Default parameters forthermistor
 const double THERMISTOR_NOMINAL_RESISTANCE   = 10.0f;
@@ -91,5 +119,15 @@ enum
   AUTOREPEAT_DELAY  = 250,
   AUTOREPEAT_PERIOD = 350
 };
+ 
+// power-on options
+enum 
+{
+  POWERON_DISABLE = 0,
+  POWERON_CONTINUE_LOOP,
+  POWERON_RESUME_PROFILE
+};
+
+#define DEFAULT_POWER_ON_BEHAVIOR POWERON_CONTINUE_LOOP
 
 #endif

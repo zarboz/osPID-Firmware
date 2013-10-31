@@ -1,4 +1,4 @@
-#ifndef PID_AutoTune_v0
+#if !defined PID_AutoTune_v0
 #define PID_AutoTune_v0
 #define LIBRARY_VERSION	0.0.0
 

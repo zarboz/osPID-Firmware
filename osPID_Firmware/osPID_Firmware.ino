@@ -43,7 +43,7 @@
 
 
 
-#ifndef USE_SIMULATOR
+#if !defined USE_SIMULATOR
 #include "ospOutputDeviceSsr.h"
 #include "ospInputDevice.h"
 enum { numInputDevices = 3 };
@@ -87,7 +87,7 @@ byte ctrlDirection = DIRECT;
 byte modeIndex = MANUAL;
 
 // the 4 setpoints we can easily switch between
-#ifndef UNITS_FAHRENHEIT
+#if !defined UNITS_FAHRENHEIT
 ospDecimalValue<1> setPoints[4] = { { 250 }, { 650 }, { 1000 }, { 1250 } };
 #else
 ospDecimalValue<1> setPoints[4] = { { 800 }, { 1500 }, { 2120 }, { 2600 } };
@@ -116,7 +116,7 @@ ospDecimalValue<1> displaySetpoint = { 250 }, displayInput = { -19999 }, display
   displayWindow = { 50 }; 
 
 // the hard trip limits
-#ifndef UNITS_FAHRENHEIT
+#if !defined UNITS_FAHRENHEIT
 ospDecimalValue<1> lowerTripLimit = { 0 } , upperTripLimit = { 1250 };
 #else
 ospDecimalValue<1> lowerTripLimit = { 0 } , upperTripLimit = { 2600 };
@@ -125,37 +125,21 @@ bool tripLimitsEnabled;
 bool tripped;
 bool tripAutoReset;
 
-// what to do on power-on
-enum 
-{
-  POWERON_DISABLE = 0,
-  POWERON_CONTINUE_LOOP,
-  POWERON_RESUME_PROFILE
-};
-
-// auto tune methods
-enum
-{
-  ZIEGLER_NICHOLS_PI = 0,
-  ZIEGLER_NICHOLS_PID,
-  LAST_AUTO_TUNE_METHOD = ZIEGLER_NICHOLS_PID
-};
-
-byte powerOnBehavior = POWERON_CONTINUE_LOOP;
+byte powerOnBehavior = DEFAULT_POWER_ON_BEHAVIOR;
 
 bool controllerIsBooting = true;
 
 // auto tune algorithm
-byte aTuneMethod = ZIEGLER_NICHOLS_PI;
+byte aTuneMethod = AUTO_TUNE_DEFAULT_METHOD;
 
 // the parameters for the autotuner
-ospDecimalValue<1> aTuneStep = { 200 };
-#ifndef UNITS_FAHRENHEIT
-ospDecimalValue<1> aTuneNoise = { 18 }; 
-#else // Celsius
-ospDecimalValue<1> aTuneNoise = { 10 }; 
+ospDecimalValue<1> aTuneStep  = { AUTO_TUNE_DEFAULT_OUTPUT_STEP * 10 };
+#if !defined UNITS_FAHRENHEIT
+ospDecimalValue<1> aTuneNoise = { AUTO_TUNE_DEFAULT_NOISE_BAND_CELSIUS * 18 }; 
+#else 
+ospDecimalValue<1> aTuneNoise = { AUTO_TUNE_DEFAULT_NOISE_BAND_CELSIUS * 10 }; 
 #endif
-int aTuneLookBack = 10; // units for this parameter is seconds
+int aTuneLookBack = AUTO_TUNE_DEFAULT_LOOKBACK_SEC; 
 PID_ATune aTune(&lastGoodInput, &output);
 
 // whether the autotuner is active
@@ -171,7 +155,7 @@ extern void drawNotificationCursor(char icon);
 
 // some constants in flash memory, for reuse
 
-#ifndef UNITS_FAHRENHEIT
+#if !defined UNITS_FAHRENHEIT
 const __FlashStringHelper *FdegCelsius() { return F(" °C"); }
 #else
 const __FlashStringHelper *FdegFahrenheit() { return F(" °F"); }
@@ -199,7 +183,7 @@ bool __attribute__ ((noinline)) after(unsigned long targetTime)
 #define MINIMUM(a,b) (((a)<(b))?(a):(b))
 #define MAXIMUM(a,b) (((b)>(a))?(a):(b))
 
-#ifndef SILENCE_BUZZER
+#if !defined SILENCE_BUZZER
 // buzzer 
 volatile int buzz = 0; // countdown timer for intermittent buzzer
 enum { BUZZ_OFF = 0, BUZZ_UNTIL_CANCEL = -769 };
@@ -233,7 +217,9 @@ ISR (TIMER2_COMPA_vect)
     }
     buzz--;
     if (buzz == BUZZ_UNTIL_CANCEL - 1024)
+    {
       buzz = BUZZ_UNTIL_CANCEL;
+    }
   }
 }
 #endif
@@ -262,7 +248,7 @@ void setup()
   pinMode(buzzerPin, OUTPUT);
   
   // set up timer2 for buzzer interrupt
-#ifndef SILENCE_BUZZER
+#if !defined SILENCE_BUZZER
   cli();                   // disable interrupts
   OCR2A = 249;              // set up timer2 CTC interrupts for buzzer
   TCCR2A |= (1 << WGM21);  // CTC Mode
@@ -287,13 +273,15 @@ void setup()
   theOutputDevice.initialize();
 
   // set up the serial interface
-#ifndef STANDALONE_CONTROLLER
+#if !defined STANDALONE_CONTROLLER
   setupSerial();
 #endif
 
   long int pause = now + 2000 - millis();
   if (pause < 10)
+  {
     pause = 10;
+  }
   delay(pause);
   updateTimer();
 
@@ -321,13 +309,17 @@ void setup()
       startCurrentProfileStep();
     }
     else
+    {
       recordProfileCompletion(); // we don't want to pick up again, so mark it completed
+    }
   }
 
   // kick things off by requesting sensor input
   updateTimer();
   if (theInputDevice.getInitializationStatus())
+  {
     readInputTime = now + theInputDevice.requestInput();
+  }
 
   controllerIsBooting = false;
 }
@@ -507,7 +499,7 @@ void realtimeLoop()
   blockSlowOperations = false;
 }
 
-#ifndef STANDALONE_CONTROLLER
+#if !defined STANDALONE_CONTROLLER
 // we accumulate characters for a single serial command in this buffer
 char serialCommandBuffer[33];
 byte serialCommandLength;
@@ -554,7 +546,12 @@ void loop()
     // this may call ospSettingsHelper::eepromClearBits(), but not
     // ospSettingsHelper::eepromWrite()
     if (runningProfile)
+    {
       profileLoopIteration();
+      
+      // update displayed set point
+      displaySetpoint = makeDecimal<1>(activeSetPoint);
+    }
 
     // update the PID
     myPID.Compute();  
@@ -577,13 +574,13 @@ void loop()
       output = 0.0;
       manualOutput = (ospDecimalValue<1>){0};
       tripped = true;
-#ifndef SILENCE_BUZZER  
+#if !defined SILENCE_BUZZER  
       if (buzz >= BUZZ_OFF)
         buzzUntilCancel; // could get pretty annoying
 #endif      
     }
 
-#ifndef SILENCE_BUZZER      
+#if !defined SILENCE_BUZZER      
     if (!tripped)
       buzzOff;
 #endif      
@@ -591,7 +588,7 @@ void loop()
   else
   {
     tripped= false;
-#ifndef SILENCE_BUZZER 
+#if !defined SILENCE_BUZZER 
     buzzOff;
 #endif    
   }  
@@ -637,7 +634,7 @@ void loop()
     saveEEPROMSettings();
   }
 
-#ifndef STANDALONE_CONTROLLER
+#if !defined STANDALONE_CONTROLLER
   // accept any pending characters from the serial buffer
   byte avail = Serial.available();
   while (avail--)

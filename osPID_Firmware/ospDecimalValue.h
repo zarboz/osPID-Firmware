@@ -1,4 +1,4 @@
-#ifndef OSPDECIMALVALUE_H
+#if !defined OSPDECIMALVALUE_H
 #define OSPDECIMALVALUE_H
 
 #include "enable_if.h"

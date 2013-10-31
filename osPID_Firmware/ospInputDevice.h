@@ -1,4 +1,4 @@
-#ifndef OSPINPUTDEVICE_H
+#if !defined OSPINPUTDEVICE_H
 #define OSPINPUTDEVICE_H
 
 #include "ospIODevice.h"
@@ -230,7 +230,7 @@ public:
     default:
       return NAN;
     }
-#ifndef UNITS_FAHRENHEIT
+#if !defined UNITS_FAHRENHEIT
     return temperature + inputSetting[inputType];
 #else
     return (temperature * 1.8 + 32.0) + inputSetting[inputType];

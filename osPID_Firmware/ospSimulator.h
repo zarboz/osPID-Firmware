@@ -1,4 +1,4 @@
-#ifndef OSPSIMULATOR_H
+#if !defined OSPSIMULATOR_H
 #define OSPSIMULATOR_H
 
 #include "ospIODevice.h"
@@ -17,7 +17,7 @@ private:
   double kpmodel, taup, theta[30];
   double input;
 
-  static const double outputStart = 50.0f;
+  static const double outputStart = 50.0f;  
   static const double inputStart = 250.0f;
 
 public:
@@ -101,7 +101,7 @@ private:
   void updateModel()
   {
     // Cycle the dead time
-    for(byte i = 0; i < 30; i++)
+    for (byte i = 0; i < 30; i++)
     {
       theta[i] = theta[i+1];
     }

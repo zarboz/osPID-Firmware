@@ -177,9 +177,13 @@ struct DecimalItem
   {
     byte f = flags();
     if (f & TWO_DECIMAL_PLACES)
+    {
       return 2;
+    }
     if (f & THREE_DECIMAL_PLACES)
+    {
       return 3;
+    }
     return 1;
   }
 
@@ -187,11 +191,17 @@ struct DecimalItem
   {
     byte f = flags();
     if (f & RANGE_10_32767)
+    {
       return 10;
+    }
     if (f & (RANGE_0_1000 | RANGE_0_32767))
+    {
       return 0;
+    }
     if (f & RANGE_M999_P999)
+    {
       return -999;
+    }
     return -9999;
   }
 
@@ -199,11 +209,17 @@ struct DecimalItem
   {
     byte f = flags();
     if (f & RANGE_M999_P999)
+    {
       return 999;
+    }
     if (f & RANGE_0_1000)
+    {
       return 1000;
+    }
     if (f & (RANGE_0_32767 | RANGE_10_32767))
+    {
       return 32767;
+    }
     return 9999;
   }
 
@@ -217,9 +233,13 @@ struct DecimalItem
   {
     int *p = (int *)pgm_read_word_near(&pmemValPtr);
     if (*p > this->maximumValue())
+    {
       *p = this->maximumValue();
+    }
     if (*p < this->minimumValue())
+    {
       *p = this->minimumValue();
+    }
   }
 
   int *valuePtr() const 
@@ -309,7 +329,9 @@ static void drawBadCsum(byte profile)
   delay(500);
   LCDsetCursorTopLeft();
   if (profile == 0xFF)
+  {
     LCDprintln(PSTR("Settings"));
+  }
   else
   {
     LCDprintln(Pprofile);
@@ -389,7 +411,9 @@ static char *formatDecimalValue(char buffer[7], int num, byte decimals)
     if (num == 0)
     {
       if (i >= decimalPos - 1)
+      {
         buffer[i] = '0';
+      }
       else if (isNegative)
       {
         buffer[i] = '-';
@@ -431,7 +455,9 @@ static void drawDecimalValue(byte item)
   {
     // display an error
     if (now & 0x400)
+    {
       strcpy_P(&buffer[firstDigitPosition + 1], PSTR("Err"));
+    }
   }
   else
   {
@@ -459,10 +485,13 @@ static bool __attribute__ ((noinline)) canEditItem(byte item)
   bool canEdit = !tuning;
 
   if (item < FIRST_DECIMAL_ITEM)
+  {
     canEdit = true; // menus always get a '>' selector
+  }
   else if (item < FIRST_ACTION_ITEM)
+  {
     canEdit = canEdit && canEditDecimalItem(item - FIRST_DECIMAL_ITEM);
-
+  }
   return canEdit;
 }
 
@@ -490,9 +519,13 @@ static void __attribute__ ((noinline)) drawSelector(byte item, bool selected)
   }
 
   if (menuState.editing)
+  {
     theLCD.print(canEdit ? char(126) : 'X'); // char(126) = arrow pointing right
+  }
   else
+  {
     theLCD.print(canEdit ? '>' : '|');
+  }
 }
 
 // draw a profile name at the current position
@@ -558,9 +591,13 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     break;
   case ITEM_PROFILE_MENU:
     if (runningProfile)
+    {
       LCDprintln(PSTR("Cancel"));
+    }
     else
+    {
       drawProfileName(activeProfileIndex);
+    }
     break;
     // case ITEM_SETPOINT_MENU: should not happen
 #ifndef STANDALONE_CONTROLLER   
@@ -582,9 +619,13 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     break;
   case ITEM_AUTOTUNE_CMD:
     if (tuning)
+    {
       LCDprintln(PSTR("Cancel"));
+    }
     else
+    {
       LCDprintln(PSTR("Auto Tuning"));
+    }
     break;
   case ITEM_PROFILE1:
   case ITEM_PROFILE2:
@@ -597,15 +638,23 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     //case ITEM_SETPOINT4: should not happen
   case ITEM_PID_MODE:
     if (modeIndex == MANUAL)
+    {
       LCDprintln(PSTR("Manual Control"));
+    }
     else
+    {
       LCDprintln(PSTR("PID Control"));
+    }
     break;
   case ITEM_PID_DIRECTION:
     if (ctrlDirection == DIRECT)
+    {
       LCDprintln(PSTR("Direct Action"));
+    }
     else
+    {
       LCDprintln(PSTR("Reverse Action"));
+    }
     break;
 #ifndef USE_SIMULATOR 
   case ITEM_INPUT_THERMISTOR:
@@ -633,15 +682,23 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     break;
   case ITEM_TRIP_ENABLED:
     if (tripLimitsEnabled)
+    {
       LCDprintln(PSTR("Alarm Enabled")); 
+    }
     else
+    {
       LCDprintln(PSTR("Alarm Disabled"));
+    }
     break;
   case ITEM_TRIP_AUTORESET:
     if (tripAutoReset)
+    {
       LCDprintln(PSTR("Auto Reset"));
+    }
     else
+    {
       LCDprintln(PSTR("Manual Reset"));
+    }
     break;
   case ITEM_RESET_ROM_NO:
     LCDprintln(PSTR("No"));
@@ -682,10 +739,12 @@ static void drawStatusFlash()
   else if (runningProfile && (flashState > 1))
   {
     if (flashState == 2)
+    {
       ch = 'P';
+    }
     else
     {
-      ch = hex(currentProfileStep);
+      ch = currentProfileStep + 'A';
     }
   }
   else
@@ -732,7 +791,9 @@ void __attribute__ ((noinline)) drawNotificationCursor(char icon)
 #endif    
 
     if (!icon)
+    {
       return;
+    }
 
     row = menuState.highlightedItemMenuIndex / 2;
     col = 5 * (menuState.highlightedItemMenuIndex & 1);
@@ -750,21 +811,29 @@ void __attribute__ ((noinline)) drawNotificationCursor(char icon)
   }
 
   if (menuState.editing)
+  {
     theLCD.setCursor(menuState.editDepth, row);
+  }
 }
 
 static void __attribute__ ((noinline)) startEditing(byte item)
 {
   menuState.editing = true;
   if (item < FIRST_ACTION_ITEM)
+  {
     menuState.editDepth = firstDigitPosition;
+  }
   else
+  {
     menuState.editDepth = 1;
+  }
 
   menuState.editStartMillis = millis();
 
   if (canEditItem(item))
+  {
     theLCD.cursor();
+  }
 }
 
 static void backKeyPress()
@@ -778,11 +847,15 @@ static void backKeyPress()
     {
       // floating-point items have a decimal point, which we want to jump over
       if (menuState.editDepth == lastDigitPosition - decimalItemData[item - FIRST_DECIMAL_ITEM].decimalPlaces())
+      {
         menuState.editDepth--;
+      }
     }
 
     if (menuState.editDepth < firstDigitPosition)
+    {
       stopEditing();   
+    }
 
     return;
   }
@@ -838,8 +911,9 @@ static void updownKeyPress(bool up)
     if (up)
     {
       if (menuState.highlightedItemMenuIndex == 0)
+      {
         return;
-
+      }
       if (menuData[menuState.currentMenu].is2x2())
       {
         menuState.highlightedItemMenuIndex--;
@@ -847,7 +921,9 @@ static void updownKeyPress(bool up)
       }
 
       if (menuState.highlightedItemMenuIndex == menuState.firstItemMenuIndex)
+      {
         menuState.firstItemMenuIndex--;
+      }
 
       menuState.highlightedItemMenuIndex = menuState.firstItemMenuIndex;
       return;
@@ -857,15 +933,21 @@ static void updownKeyPress(bool up)
     byte menuItemCount = menuData[menuState.currentMenu].itemCount();
 
     if (menuState.highlightedItemMenuIndex == menuItemCount - 1)
+    {
       return;
+    }
 
     menuState.highlightedItemMenuIndex++;
 
     if (menuData[menuState.currentMenu].is2x2())
+    {
       return;
+    }
 
     if (menuState.highlightedItemMenuIndex != menuState.firstItemMenuIndex + 1)
+    {
       menuState.firstItemMenuIndex = menuState.highlightedItemMenuIndex - 1;
+    }
     return;
   }
 
@@ -873,7 +955,9 @@ static void updownKeyPress(bool up)
   byte item = menuData[menuState.currentMenu].itemAt(menuState.highlightedItemMenuIndex);
 
   if (!canEditItem(item))
+  {
     return;
+  }
 
   // _something_ is going to change, so the settings are now dirty
   markSettingsDirty();
@@ -886,7 +970,9 @@ static void updownKeyPress(bool up)
       modeIndex ^= 1; //= (modeIndex == 0 ? 1 : 0);
       // use the manual output value
       if (modeIndex == MANUAL)
+      {
         setOutputToManualOutput();
+      }
       myPID.SetMode(modeIndex);
       break;
     case ITEM_PID_DIRECTION:
@@ -917,7 +1003,9 @@ static void updownKeyPress(bool up)
   int increment = pow10(lastDigitPosition - menuState.editDepth - (menuState.editDepth < decimalPointPosition ? 1 : 0));
 
   if (!up)
+  {
     increment = -increment;
+  }
 
   // do the in/decrement and clamp it
   int val = decimalItemData[itemIndex].currentValue();
@@ -933,9 +1021,13 @@ static void updownKeyPress(bool up)
   }
 #ifndef USE_SIMULATOR
   if (item == ITEM_WINDOW_LENGTH)
+  {
     theOutputDevice.setOutputWindowSeconds(displayWindow);
+  }
   if (item == ITEM_CALIBRATION)
+  {
     theInputDevice.setCalibration(displayCalibration);
+  }
 #endif    
 
   // capture any possible changes to the output value if we're in MANUAL mode
@@ -958,11 +1050,15 @@ static void okKeyPress()
     {
       // floating-point items have a decimal point, which we want to jump over
       if (menuState.editDepth == lastDigitPosition - decimalItemData[item - FIRST_DECIMAL_ITEM].decimalPlaces())
+      {
         menuState.editDepth++;
+      }
     }
 
     if ((menuState.editDepth > lastDigitPosition) || (item >= FIRST_ACTION_ITEM))
+    {
       stopEditing();
+    }
 
     return;
   }
@@ -974,9 +1070,13 @@ static void okKeyPress()
     if (item == ITEM_PROFILE_MENU)
     {
       if (runningProfile)
+      {
         stopProfile();
+      }
       else if (!tuning)
+      {
         startProfile();
+      }
       return;
     }
 
@@ -1011,7 +1111,7 @@ static void okKeyPress()
     {
       tripped = false;
       setOutputToManualOutput();
-#ifndef SILENCE_BUZZER      
+#if !defined SILENCE_BUZZER      
       buzzOff;
 #endif
       return;
@@ -1028,11 +1128,17 @@ static void okKeyPress()
   {
   case ITEM_AUTOTUNE_CMD:
     if (runningProfile)
+    {
       break;
+    }
     if (!tuning)
+    {
       startAutoTune();
+    }
     else
+    {
       stopAutoTune();
+    }
     break;
 
   case ITEM_PROFILE1:
@@ -1040,7 +1146,9 @@ static void okKeyPress()
   case ITEM_PROFILE3:
     activeProfileIndex = item - ITEM_PROFILE1;
     if (!tuning)
+    {
       startProfile();
+    }
     markSettingsDirty();
 
     // return to the prior menu
@@ -1067,7 +1175,7 @@ static void okKeyPress()
     startEditing(item);
     break;
     
-#ifndef  USE_SIMULATOR
+#if !defined  USE_SIMULATOR
   case ITEM_INPUT_THERMISTOR:
   case ITEM_INPUT_ONEWIRE:
   case ITEM_INPUT_THERMOCOUPLE:
@@ -1107,7 +1215,7 @@ static void okKeyPress()
     ((VoidFn) 0x0000)();
     break;
   default:
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
     BUGCHECK();
 #else    
     ;
@@ -1123,7 +1231,9 @@ static bool okKeyLongPress()
 
   // don't try to open menus while the user is editing a value
   if (menuState.editing)
+  {
     return false;
+  }
 
   // only two items respond to long presses: the setpoint and the profile menu
   if (item == ITEM_SETPOINT)

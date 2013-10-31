@@ -1,4 +1,4 @@
-#ifndef OSPANALOGBUTTON_H
+#if !defined OSPANALOGBUTTON_H
 #define OSPANALOGBUTTON_H
 
 #include <Arduino.h>

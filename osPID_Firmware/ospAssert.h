@@ -1,4 +1,4 @@
-#ifndef OSPASSERT_H
+#if !defined OSPASSERT_H
 #define OSPASSERT_H
 
 // each file is expected to #define BUGCHECK to its appropriate

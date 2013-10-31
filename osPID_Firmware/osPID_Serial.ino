@@ -36,16 +36,16 @@ Command list:
 
   B? #Number -- query / set input device temperature caliBration value
   
-  C -- cancel profile execution
+  C -- Cancel profile execution
 
   c? -- query the Comm speed, in kbps; it is fixed so can't set it
+
+  D? #0-1 -- Direction -- set PID gain sign: 0 = direct, 1 = reverse
 
   d? #Number -- set D gain
 
   E #String -- Execute the profile of the given name
     FIXME can get rid of this command if we are short of space
-
-  e #0-2 -- Execute the profile of the given number
 
   I? #Number -- set Input value
 
@@ -70,19 +70,17 @@ Command list:
 
   P? #Integer #Integer #Number -- add a steP to the profile buffer with the
      numbers being {type, duration, endpoint}, or query which Profile step
-     being run, returning {profile step, type, duration, targetSetPoint, time} 
-     where time in seconds is the time remaining until the end of the step, 
-     exceptfor type STEP_WAIT_TO_CROSS where it is the time elapsed since the 
-     beginning uof the step
+     being run, returning {profile step, type, targetSetPoint, duration, time} 
+     where time since the beginning uof the step
    
   p? #Number -- set P gain
   
   Q -- Query -- returns status lines: "T {alarm status}", "S {setpoint}", "I {input}", 
-    "O {output}" plus "N {profile name}" "P {profile step, ... as above}" 
+    "O {output}" plus "P {profile step, ... as above}" 
     if a profile is active or else "A 1" if currently auto-tuning
     and "A 0" if the auto-tuner is off
 
-  R? #0-1 -- diRection -- set PID gain sign: 0 = direct, 1 = reverse
+  R? #0-2 -- Run the profile of the given number, or query whether a profile is running
 
   r #Integer -- Reset the memory to the hardcoded defaults, if and only if the number is -999
 
@@ -164,7 +162,9 @@ static const char * parseDecimal(const char *str, long *out, byte *decimals)
     if (c == '.')
     {
       if (hasFraction)
+      {
         goto end_of_number;
+      }
       hasFraction = true;
       str++;
       continue;
@@ -174,7 +174,9 @@ static const char * parseDecimal(const char *str, long *out, byte *decimals)
     {
 end_of_number:
       if (isNegative)
+      {
         value = -value;
+      }
 
       *out = value;
       *decimals = dec;
@@ -185,7 +187,9 @@ end_of_number:
     value = value * 10 + (c - '0');
 
     if (hasFraction)
+    {
       dec++;
+    }
   }
 }
 
@@ -202,7 +206,9 @@ static int pow10(byte n)
 static int coerceToDecimal(long val, byte currentDecimals, byte desiredDecimals)
 {
   if (currentDecimals < desiredDecimals)
+  {
     return int(val * pow10(desiredDecimals - currentDecimals));
+  }
   else if (desiredDecimals < currentDecimals)
   {
     // need to do a rounded division
@@ -213,9 +219,13 @@ static int coerceToDecimal(long val, byte currentDecimals, byte desiredDecimals)
     if (abs(rem) >= divisor / 2)
     {
       if (val < 0)
+      {
         quot--;
+      }
       else
+      {
         quot++;
+      }
     }
     return quot;
   }
@@ -320,7 +330,9 @@ static bool cmdStartProfile(const char *name)
     while (*p && (ch < ospProfile::NAME_LENGTH))
     {
       if (*p != getProfileNameCharAt(i, ch))
+      {
         match = false;
+      }
       p++;
       ch++;
     }
@@ -342,9 +354,13 @@ static void cmdPeek(int address)
   byte val;
 
   if (address <= 0)
+  {
     ospSettingsHelper::eepromRead(-address, val);
+  }
   else
+  {
     val = * (byte *)address;
+  }
 
   serialPrint(hex(val >> 4));  
   serialPrintln(hex(val & 0xF));
@@ -353,9 +369,13 @@ static void cmdPeek(int address)
 static void cmdPoke(int address, byte val)
 {
   if (address <= 0)
+  {
     ospSettingsHelper::eepromWrite(-address, val);
+  }
   else
+  {
     *(byte *)address = val;
+  }
 }
 #endif
 
@@ -374,7 +394,9 @@ static void serialPrintProfileName(byte profileIndex)
   {
     char ch = getProfileNameCharAt(profileIndex, i);
     if (ch == 0)
+    {
       break;
+    }
     Serial.write(ch);
   }
   serialPrint(char('"'));
@@ -398,7 +420,7 @@ static void cmdQuery()
   
   if (runningProfile)
   {
-    query('N');
+    //query('N');
     query('P');      
   }
   else
@@ -421,14 +443,22 @@ static void cmdExamineSettings()
   Serial.println();
 
   if (modeIndex == AUTOMATIC)
+  {
     serialPrintln(F("PID mode"));
+  }
   else
+  {
     serialPrintln(F("Manual mode"));
+  }
 
   if (ctrlDirection == DIRECT)
+  {
     serialPrintln(F("Direct action"));
+  }
   else
+  {
     serialPrintln(F("Reverse action"));
+  }
     
   Serial.println();
 
@@ -436,9 +466,13 @@ static void cmdExamineSettings()
   for (byte i = 0; i < 4; i++)
   {
     if (i == setPointIndex)
+    {
       serialPrint('*');
+    }
     else
+    {
       serialPrint(' ');
+    }
     serialPrint(F("Sv"));
     serialPrint(char('1' + i));
     serialPrintFcolon();
@@ -449,9 +483,13 @@ static void cmdExamineSettings()
     serialPrint(FdegFahrenheit());
 #endif
     if (i & 1)
+    {
       Serial.println();
+    }
     else
+    {
       serialPrint('\t');
+    }
   }
 
   Serial.println();
@@ -509,11 +547,17 @@ static void serialPrintProfileState(byte profileIndex, byte stepIndex)
   getProfileStepData(profileIndex, stepIndex, &type, &duration, &endpoint);
 
   if (type == ospProfile::STEP_INVALID)
+  {
     return;
+  }
   if (type & ospProfile::STEP_FLAG_BUZZER)
+  {
     serialPrint(F(" *"));
+  }
   else
+  {
     serialPrint(F("  "));   
+  }
   serialPrint(type & ospProfile::STEP_TYPE_MASK);  
   serialPrint(' ');
   serialPrint(duration); 
@@ -545,7 +589,9 @@ static bool __attribute__ ((noinline)) trySetGain(ospDecimalValue<3> *p, long va
   ospDecimalValue<3> gain = makeDecimal<3>(val, decimals);
 
   if (((ospDecimalValue<3>){32767} < gain) || (gain < (ospDecimalValue<3>){0}))
+  {
     return false;
+  }
 
   *p = gain;
   return true;
@@ -556,7 +602,9 @@ static bool __attribute__ ((noinline)) trySetTemp(ospDecimalValue<1> *p, long va
   ospDecimalValue<1> temp = makeDecimal<1>(val, decimals);
 
   if (((ospDecimalValue<1>){9999} < temp) || (temp < (ospDecimalValue<1>){-9999}))
+  {
     return false;
+  }
 
   *p = temp;
   return true;
@@ -594,10 +642,11 @@ PROGMEM SerialCommandParseData commandParseData[] =
   { 'A', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
   { 'B', ARGS_ONE_NUMBER | ARGS_FLAG_QUERYABLE },
   { 'C', ARGS_NONE },
+  { 'D', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
   { 'E', ARGS_STRING },
   { 'I', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'J', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
   { 'K', ARGS_ONE_NUMBER },
 #endif
   { 'L', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
@@ -606,7 +655,7 @@ PROGMEM SerialCommandParseData commandParseData[] =
   { 'O', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'P', ARGS_THREE_NUMBERS | ARGS_FLAG_QUERYABLE },
   { 'Q', ARGS_NONE },
-  { 'R', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
+  { 'R', ARGS_ONE_NUMBER | ARGS_FLAG_PROFILE_NUMBER | ARGS_FLAG_QUERYABLE },
   { 'S', ARGS_ONE_NUMBER | ARGS_FLAG_QUERYABLE },
   { 'T', ARGS_NONE | ARGS_FLAG_QUERYABLE },
   { 'U', ARGS_STRING },
@@ -618,9 +667,8 @@ PROGMEM SerialCommandParseData commandParseData[] =
   { 'b', ARGS_THREE_NUMBERS | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
   { 'c', ARGS_FLAG_QUERYABLE },
   { 'd', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
-  { 'e', ARGS_ONE_NUMBER | ARGS_FLAG_PROFILE_NUMBER },
   { 'i', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
   { 'k', ARGS_TWO_NUMBERS },
 #endif
   { 'l', ARGS_ONE_NUMBER | ARGS_FLAG_QUERYABLE },
@@ -644,20 +692,30 @@ static byte argsForMnemonic(char mnemonic)
     if (start + 1 == end)
     {
       if (pgm_read_byte_near(&(commandParseData[start].mnemonic)) == mnemonic)
+      {
         return pgm_read_byte_near(&(commandParseData[start].args));
+      }
       if (pgm_read_byte_near(&(commandParseData[end].mnemonic)) == mnemonic)
+      {
         return pgm_read_byte_near(&(commandParseData[end].args));
+      }
       return ARGS_NOT_FOUND;
     }
 
     byte pivot = (start + end) / 2;
     char m = pgm_read_byte_near(&(commandParseData[pivot].mnemonic));
     if (m < mnemonic)
+    {
       start = pivot;
+    }
     else if (mnemonic < m)
+    {
       end = pivot;
+    }
     else // found it!
+    {
       return pgm_read_byte_near(&(commandParseData[pivot].args));
+    }
   }
 }
 
@@ -674,18 +732,24 @@ static void processSerialCommand()
   byte argDescriptor;
 
   if (serialCommandBuffer[--serialCommandLength] != '\n')
+  {
     goto out_EINV;
+  }
 
   // first parse the arguments
   argDescriptor = argsForMnemonic(serialCommandBuffer[0]);
   if (argDescriptor == ARGS_NOT_FOUND)
+  {
     goto out_EINV;
+  }
 
   if ((argDescriptor & ARGS_FLAG_QUERYABLE) && (*p == '?'))
   {  
     // this is a query
     if (p[1] != '\n')
+    {
       goto out_EINV;
+    }
 
     switch (serialCommandBuffer[0])
     {
@@ -704,6 +768,9 @@ static void processSerialCommand()
       break;
     case 'c':
       serialPrintln("9600");
+      break;
+    case 'D':
+      serialPrintln(ctrlDirection);
       break;
     case 'd':
       serialPrintln(DGain);
@@ -732,7 +799,9 @@ static void processSerialCommand()
     case 'N':
     /*
       if (!runningProfile)
+      {
         goto out_EINV;
+      }
       serialPrintProfileName(activeProfileIndex);
     */
       for (byte profileIndex = 0; profileIndex < 3; profileIndex++)
@@ -750,36 +819,33 @@ static void processSerialCommand()
       serialPrintln(powerOnBehavior);
       break;
     case 'P':
+      long elapsed;
       if (!runningProfile)
+      {
         goto out_EINV;
+      }
+      serialPrint(activeProfileIndex);
+      serialPrint(' ');   
       serialPrint(currentProfileStep);
       serialPrint(' ');
       serialPrint(profileState.stepType);
       serialPrint(' ');
-      serialPrint(profileState.stepDuration);
-      serialPrint(' ');
       serialPrint(profileState.targetSetpoint);
       serialPrint(' ');
-      if (
-        (profileState.stepType == ospProfile::STEP_RAMP_TO_SETPOINT) || 
-        (profileState.stepType == ospProfile::STEP_JUMP_TO_SETPOINT) ||
-        (profileState.stepType == ospProfile::STEP_SOAK_AT_VALUE)
-      )
-      {
-        serialPrint(profileState.stepEndMillis);
-      }
-      else if (profileState.stepType == ospProfile::STEP_WAIT_TO_CROSS)
-      {
-        long elapsed = now - profileState.stepEndMillis + profileState.stepDuration;
-        serialPrint(elapsed);
-      }
+      serialPrint(profileState.stepDuration);
+      serialPrint(' ');
+      elapsed = now - profileState.stepEndMillis + profileState.stepDuration;
+      serialPrint(elapsed);
       Serial.println();
       break;
     case 'p':
       serialPrintln(PGain);
       break;
     case 'R':
-      serialPrintln(ctrlDirection);
+      if (runningProfile)
+        serialPrintln(activeProfileIndex);
+      else      
+        serialPrintln(F("-1"));
       break;
     case 'S':
       serialPrintlnFloatTemp(activeSetPoint);
@@ -845,13 +911,17 @@ static void processSerialCommand()
     CHECK_SPACE();
     // remove the trailing '\n' or '\r\n' from the #String
     if (serialCommandBuffer[serialCommandLength - 1] == '\r')
+    {
       serialCommandBuffer[--serialCommandLength] = '\0';
+    }
     else
+    {
       serialCommandBuffer[serialCommandLength] = '\0';
+    }
     // p now points to the #String
     break;
   default:
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
     BUGCHECK();
 #else    
     ;
@@ -862,14 +932,20 @@ static void processSerialCommand()
   if (argDescriptor & (ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_PROFILE_NUMBER | ARGS_FLAG_FIRST_IS_01))
   {
     if (i1 < 0)
+    {
       goto out_EINV;
+    }
   }
 
   if ((argDescriptor & ARGS_FLAG_PROFILE_NUMBER) && (i1 >= NR_PROFILES))
+  {
     goto out_EINV;
+  }
 
   if ((argDescriptor & ARGS_FLAG_FIRST_IS_01) && (i1 > 1))
+  {
     goto out_EINV;
+  }
 
 #undef CHECK_CMD_END
 #undef CHECK_SPACE
@@ -884,12 +960,18 @@ static void processSerialCommand()
   {
   case 'A': // stop/start auto-tuner
     if ((tuning ^ (byte) i1) == 0) // autotuner already on/off
+    {
       goto out_ACK; // no EEPROM writeback needed
+    }
     tuning = i1;
     if (tuning)
+    {
       startAutoTune();
+    }
     else
+    {
       stopAutoTune();
+    }
     break;
   case 'a': // set the auto-tune parameters
     aTuneStep = makeDecimal<1>(i3, d3);
@@ -905,23 +987,50 @@ static void processSerialCommand()
     break;
   case 'C': // cancel profile execution
     if (runningProfile)
+    {
       stopProfile();
+    }
     else
+    {
       goto out_EMOD;
+    }
     goto out_ACK; // no EEPROM writeback needed
+/*
+  // no longer implemented
+  case 'c': // set the comm speed
+    if (cmdSetSerialSpeed(i1)) // since this resets the interface, just return
+      return;
+    goto out_EINV;
+*/
+  case 'D': // set the controller action direction
+    ctrlDirection = i1;
+    myPID.SetControllerDirection(i1);
+    break;
   case 'd': // set the D gain
     if (tuning)
+    {
       goto out_EMOD;
+    }
     if (!trySetGain(&DGain, i1, d1))
+    {
       goto out_EINV;
+    }
     break;
   case 'E': // execute a profile by name
+    if (tuning || runningProfile)
+      goto out_EMOD;
+      
     if (!cmdStartProfile(p))
+    {
       goto out_EINV;
+    }
+    modeIndex = AUTOMATIC;
     goto out_ACK; // no EEPROM writeback needed
   case 'e': // execute a profile by number
     if (tuning || runningProfile || modeIndex != AUTOMATIC)
+    {
       goto out_EMOD;
+    }
 
     activeProfileIndex = i1;
     startProfile();
@@ -930,18 +1039,24 @@ static void processSerialCommand()
     goto out_EMOD; // (I don't think so)
   case 'i': // set the I gain
     if (tuning)
+    {
       goto out_EMOD;
+    }
     if (!trySetGain(&IGain, i1, d1))
+    {
       goto out_EINV;
+    }
     break;
   case 'J': // change the active setpoint
     if (i1 >= 4)
+    {
       goto out_EINV;
+    }
 
     setPointIndex = i1;
     updateActiveSetPoint();
     break;
-#ifndef ATMEGA_32kB_FLASH  
+#if !defined ATMEGA_32kB_FLASH  
   case 'K': // memory peek
     cmdPeek(i1);
     goto out_ACK; // no EEPROM writeback needed
@@ -954,7 +1069,9 @@ static void processSerialCommand()
   case 'l': // set trip lower limit
     {
       if (!trySetTemp(&lowerTripLimit, i1, d1))
+      {
         goto out_EINV;
+      }
     }
     break;
   case 'L': // set limit trip enabled
@@ -963,15 +1080,21 @@ static void processSerialCommand()
   case 'M': // set the controller mode (PID or manual)
     modeIndex = i1;
     if (modeIndex == MANUAL)
+    {
       setOutputToManualOutput();
+    }
     myPID.SetMode(i1);
     break;
   case 'm': // select auto tune method
     // turn off auto tune
     if ((i1 < 0) || (i1 > LAST_AUTO_TUNE_METHOD))
+    {
       goto out_EINV;
+    }
     if (tuning)
+    {
       stopAutoTune();
+    }
     tuning = false;
     aTuneMethod = i1;
     break;
@@ -987,10 +1110,14 @@ static void processSerialCommand()
     {
       ospDecimalValue<1> o = makeDecimal<1>(i1, d1);
       if ((ospDecimalValue<1>){1000} < o)
+      {
         goto out_EINV;
+      }
 
       if (tuning || runningProfile || modeIndex != MANUAL)
+      {
         goto out_EMOD;
+      }
 
       manualOutput = o;
       output = double(manualOutput);
@@ -998,29 +1125,43 @@ static void processSerialCommand()
     break;
   case 'o': // set power-on behavior
     if (i1 > 2)
+    {
       goto out_EINV;
+    }
     powerOnBehavior = i1;
     break;
   case 'P': // define a profile step
     if (!profileBuffer.addStep(i3, i2, makeDecimal<1>(i1, d1)))
+    {
       goto out_EINV;
+    }
     break;
   case 'p': // set the P gain
     if (tuning)
+    {
       goto out_EMOD;
+    }
     if (!trySetGain(&PGain, i1, d1))
+    {
       goto out_EINV;
+    }
     break;
   case 'Q': // query current status
     cmdQuery();
     goto out_ACK; // no EEPROM writeback needed
-  case 'R': // set the controller action direction
-    ctrlDirection = i1;
-    myPID.SetControllerDirection(i1);
-    break;
+  case 'R': // run a profile by number
+    if (tuning || runningProfile)
+      goto out_EMOD;
+
+    modeIndex = AUTOMATIC;
+    activeProfileIndex = i1;
+    startProfile();
+    goto out_ACK; // no EEPROM writeback needed
   case 'r': // reset memory
     if (i1 != -999)
+    {
       goto out_EINV;
+    }
 
     clearEEPROM();
     serialPrintln(F("Memory marked for reset."));
@@ -1029,9 +1170,13 @@ static void processSerialCommand()
   case 'S': // change the setpoint
     {
       if (tuning)
+      {
         goto out_EMOD;
-      if (!trySetTemp(&displaySetpoint, i1, d1))      
+      }
+      if (!trySetTemp(&displaySetpoint, i1, d1)) 
+      {     
         goto out_EINV;
+      }
       setPoints[setPointIndex] = displaySetpoint;
       updateActiveSetPoint();
     }
@@ -1042,9 +1187,11 @@ static void processSerialCommand()
     break;
   case 'T': // clear a trip
     if (!tripped)
+    {
       goto out_EMOD;
+    }
     tripped = false;
-#ifndef SILENCE_BUZZER    
+#if !defined SILENCE_BUZZER    
     buzzOff;
 #endif    
     goto out_ACK; // no EEPROM writeback needed
@@ -1054,7 +1201,9 @@ static void processSerialCommand()
   case 'u': // set trip upper limit
     {
       if (!trySetTemp(&upperTripLimit, i1, d1))
+      {
         goto out_EINV;
+      }
     }
     break;
   case 'V': // save the profile buffer to EEPROM

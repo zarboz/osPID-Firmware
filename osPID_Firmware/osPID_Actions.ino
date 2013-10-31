@@ -46,9 +46,13 @@ static void startAutoTune()
   // step value, avoiding output limits 
   ospDecimalValue<1> s = makeDecimal<1>(output);
   if ((ospDecimalValue<1>){ 500 } < s)
+  {
     s = (ospDecimalValue<1>){ 1000 } - s; 
+  }
   if (aTuneStep < s)
+  {
     s = aTuneStep;
+  }
   aTune.SetOutputStep(double(s));
   
   switch (aTuneMethod) // or any other PI method
@@ -87,11 +91,7 @@ struct ProfileState
 {
   unsigned long stepEndMillis;
   unsigned long stepDuration;
-  union 
-  {
-    ospDecimalValue<1> targetSetpoint;
-    ospDecimalValue<1> maximumError;
-  };
+  ospDecimalValue<1> targetSetpoint;
   ospDecimalValue<1> initialSetpoint;
   byte stepType;
   bool temperatureRising;
@@ -108,13 +108,19 @@ static bool startCurrentProfileStep()
     &stepType, &profileState.stepDuration, &profileState.targetSetpoint);
 
   if (stepType == ospProfile::STEP_INVALID)
+  {
     return false;
+  }
 
-#ifndef SILENCE_BUZZER
+#if !defined SILENCE_BUZZER
   if (stepType & ospProfile::STEP_FLAG_BUZZER)
+  {
     buzzMillis(1000);
+  }
   else
+  {
     buzzOff;
+  }
 #endif
 
   profileState.stepType = stepType & ospProfile::STEP_TYPE_MASK;
@@ -126,7 +132,8 @@ static bool startCurrentProfileStep()
     profileState.initialSetpoint = makeDecimal<1>(activeSetPoint);
     break;
   case ospProfile::STEP_SOAK_AT_VALUE:
-    // targetSetpoint is actually maximumError
+    // targetSetpoint ignored
+    // activeSetpoint stays at initial set point
     break;
   case ospProfile::STEP_JUMP_TO_SETPOINT:
     activeSetPoint = double(profileState.targetSetpoint);
@@ -134,6 +141,7 @@ static bool startCurrentProfileStep()
   case ospProfile::STEP_WAIT_TO_CROSS:
     profileState.temperatureRising = (lastGoodInput < double(profileState.targetSetpoint));
     break;
+  case ospProfile::STEP_HOLD_UNTIL_CANCEL: // not implemented
   default:
     return false;
   }
@@ -147,7 +155,7 @@ static void profileLoopIteration()
 {
   double delta;
   double target = double(profileState.targetSetpoint);
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
   ospAssert(!tuning);
   ospAssert(runningProfile);
 #endif  
@@ -162,25 +170,25 @@ static void profileLoopIteration()
       break;
     }
     delta = target - double(profileState.initialSetpoint);
-    // FIXME: does this handle rounding correctly?
-    // FIXME: probably since it is now floating point arithmetic
     activeSetPoint = target - 
       (delta * stepTimeLeft / profileState.stepDuration);
     return;
   case ospProfile::STEP_SOAK_AT_VALUE:
-    delta = abs(activeSetPoint - lastGoodInput);
-    if (double(profileState.maximumError) < delta)
-      profileState.stepEndMillis = now + profileState.stepDuration;
-    // fall through
   case ospProfile::STEP_JUMP_TO_SETPOINT:
     if (0 < stepTimeLeft)
+    {
       return;
+    }
     break;
   case ospProfile::STEP_WAIT_TO_CROSS:
     if ((lastGoodInput < target) && profileState.temperatureRising)
+    {
       return; // not there yet
+    }
     if ((target < lastGoodInput) && !profileState.temperatureRising)
+    {
       return;
+    }
     break;
   }
   
@@ -190,7 +198,9 @@ static void profileLoopIteration()
   {
     currentProfileStep++;
     if (startCurrentProfileStep()) // returns false if there are no more steps
+    {
       return;
+    }
   }
 
   // the profile is finished
@@ -199,7 +209,7 @@ static void profileLoopIteration()
 
 static void startProfile()
 {
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
   ospAssert(!runningProfile);
 #endif  
 
@@ -208,15 +218,17 @@ static void startProfile()
   runningProfile = true;
 
   if (!startCurrentProfileStep())
+  {
     stopProfile();
+  }
 }
 
 static void stopProfile()
 {
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
   ospAssert(runningProfile);
 #endif
-#ifndef SILENCE_BUZZER
+#if !defined SILENCE_BUZZER
   buzzOff;
 #endif
   recordProfileCompletion();

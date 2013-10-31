@@ -1,5 +1,5 @@
 // This header defines the base and utility classes for input and output devices  
-#ifndef OSPIODEVICE_H
+#if !defined OSPIODEVICE_H
 #define OSPIODEVICE_H
 
 // classes defined with dummy methods to avoid overhead of pure  functions
