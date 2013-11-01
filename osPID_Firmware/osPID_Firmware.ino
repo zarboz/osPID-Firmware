@@ -5,9 +5,9 @@
 #include <avr/pgmspace.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include "ospConfig.h"
 #include "PID_v1_local.h"
 #include "PID_AutoTune_v0_local.h"
-#include "ospConfig.h"
 #include "ospAnalogButton.h"
 #include "ospDecimalValue.h"
 #include "ospProfile.h"

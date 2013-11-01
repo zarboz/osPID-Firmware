@@ -10,7 +10,10 @@
 #define BUGCHECK() ospBugCheck(PSTR("MENU"), __LINE__);
 
 
-enum { firstDigitPosition = 6, lastDigitPosition = firstDigitPosition + 4 };
+enum { 
+  firstDigitPosition = 6, 
+  lastDigitPosition  = firstDigitPosition + 4 
+};
 
 enum { MENU_FLAG_2x2_FORMAT = 0x01 };
 
@@ -54,7 +57,7 @@ enum
   ITEM_TRIP_MENU,
   ITEM_INPUT_MENU,
   ITEM_POWERON_MENU,
-#ifndef STANDALONE_CONTROLLER  
+#if !defined STANDALONE_CONTROLLER  
   ITEM_COMM_MENU,
 #endif  
   ITEM_RESET_ROM_MENU,
@@ -110,7 +113,7 @@ enum
 
 PROGMEM const byte mainMenuItems[4] = { ITEM_DASHBOARD_MENU, ITEM_PROFILE_MENU, ITEM_CONFIG_MENU, ITEM_AUTOTUNE_CMD };
 PROGMEM const byte dashMenuItems[5] = { ITEM_SETPOINT, ITEM_INPUT, ITEM_OUTPUT, ITEM_PID_MODE, ITEM_TRIP_MENU };
-#ifdef STANDALONE_CONTROLLER
+#if defined STANDALONE_CONTROLLER
 PROGMEM const byte configMenuItems[9] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, 
   ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU };
 #else
@@ -119,7 +122,7 @@ PROGMEM const byte configMenuItems[10] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_D
 #endif  
 PROGMEM const byte profileMenuItems[3] = { ITEM_PROFILE1, ITEM_PROFILE2, ITEM_PROFILE3 };
 PROGMEM const byte setpointMenuItems[4] = { ITEM_SETPOINT1, ITEM_SETPOINT2, ITEM_SETPOINT3, ITEM_SETPOINT4 };
-#ifndef USE_SIMULATOR
+#if !defined USE_SIMULATOR
 PROGMEM const byte inputMenuItems[3] = { ITEM_INPUT_THERMISTOR, ITEM_INPUT_ONEWIRE, ITEM_INPUT_THERMOCOUPLE };
 #else
 PROGMEM const byte inputMenuItems[1] = { ITEM_SIMULATOR };
@@ -256,11 +259,7 @@ PROGMEM DecimalItem decimalItemData[DECIMAL_ITEM_COUNT] =
   { 'O', 'u', 't', DecimalItem::RANGE_0_1000      | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::EDIT_MANUAL_ONLY, &manualOutput },
   { 'P', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &PGain },
   { 'I', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &IGain },
-#ifdef PI_CONTROLLER  
-  { 'D', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES| DecimalItem::NO_EDIT, &DGain },
-#else // PID controller
   { 'D', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &DGain },
-#endif  
   { 'C', 'a', 'l', DecimalItem::RANGE_M999_P999   | DecimalItem::ONE_DECIMAL_PLACE, &displayCalibration },
   { 'C', 'y', 'c', DecimalItem::RANGE_10_32767    | DecimalItem::ONE_DECIMAL_PLACE, &displayWindow },
   { 'M', 'i', 'n', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &lowerTripLimit },
@@ -318,7 +317,7 @@ static void drawStartupBanner()
   LCDprintln(PcontrollerName);
   LCDsetCursorBottomLeft();
   LCDprintln(Pversion);
-#ifndef SILENCE_BUZZER  
+#if !defined SILENCE_BUZZER  
   // buzzMillis(10);
 #endif  
 }
@@ -361,7 +360,7 @@ static void drawMenu()
   {
     // NOTE: right now the code only supports one screen (<= 4 items) in
     // 2x2 menu mode
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
     ospAssert(itemCount <= 4);
 #endif
 
@@ -377,7 +376,7 @@ static void drawMenu()
   {
     // 2x1 format; supports an arbitrary number of items in the menu
     bool highlightFirst = (menuState.highlightedItemMenuIndex == menuState.firstItemMenuIndex);
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
     ospAssert(menuState.firstItemMenuIndex + 1 < itemCount);
 #endif
 
@@ -564,7 +563,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     case ITEM_CALIBRATION:
     case ITEM_LOWER_TRIP_LIMIT:
     case ITEM_UPPER_TRIP_LIMIT:
-#ifndef UNITS_FAHRENHEIT
+#if !defined UNITS_FAHRENHEIT
       theLCD.print(F(" \337C"));
 #else
       theLCD.print(F(" \337F"));
@@ -600,7 +599,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     }
     break;
     // case ITEM_SETPOINT_MENU: should not happen
-#ifndef STANDALONE_CONTROLLER   
+#if !defined STANDALONE_CONTROLLER   
   case ITEM_COMM_MENU:
     LCDprintln(PSTR("Communication"));
     break;
@@ -656,7 +655,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
       LCDprintln(PSTR("Reverse Action"));
     }
     break;
-#ifndef USE_SIMULATOR 
+#if !defined USE_SIMULATOR 
   case ITEM_INPUT_THERMISTOR:
     LCDprintln(PSTR("Thermistor"));
     break;
@@ -707,7 +706,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     LCDprintln(PSTR("Yes"));
     break;
   default:
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
     BUGCHECK();
 #else    
     ;
@@ -769,7 +768,7 @@ static void drawHalfRowItem(byte row, byte col, bool selected, byte item)
     LCDspc(col == 0 ? 1 : 7);
     break;
   default:
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
     BUGCHECK();
 #else    
     ;
@@ -786,7 +785,7 @@ void __attribute__ ((noinline)) drawNotificationCursor(char icon)
   byte row, col;
   if (menuData[menuState.currentMenu].is2x2())
   {
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
     ospAssert(!menuState.editing);
 #endif    
 
@@ -886,7 +885,7 @@ static void backKeyPress()
   case ITEM_INPUT_MENU:
     prevMenu -= 2;
   case ITEM_POWERON_MENU:
-#ifndef STANDALONE_CONTROLLER  
+#if !defined STANDALONE_CONTROLLER  
   case ITEM_COMM_MENU:
 #endif  
   case ITEM_RESET_ROM_MENU:
@@ -895,7 +894,7 @@ static void backKeyPress()
     menuState.firstItemMenuIndex = menuState.highlightedItemMenuIndex - 1;
     break;
   default:
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
     BUGCHECK();
 #else    
     ;
@@ -986,7 +985,7 @@ static void updownKeyPress(bool up)
       tripAutoReset = !tripAutoReset;
       break;
     default:
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
     BUGCHECK();
 #else    
     ;
@@ -1019,7 +1018,7 @@ static void updownKeyPress(bool up)
     setPoints[setPointIndex] = displaySetpoint;
     updateActiveSetPoint();
   }
-#ifndef USE_SIMULATOR
+#if !defined USE_SIMULATOR
   if (item == ITEM_WINDOW_LENGTH)
   {
     theOutputDevice.setOutputWindowSeconds(displayWindow);
@@ -1255,11 +1254,3 @@ static bool okKeyLongPress()
 
   return true;
 }
-
-
-
-
-
-
-
-

@@ -275,7 +275,7 @@ template<int D> static void __attribute__ ((noinline)) serialPrintln(ospDecimalV
 template<int D> static void __attribute__ ((noinline)) serialPrintlnTemp(ospDecimalValue<D> val)
 {
   serialPrint(val);
-#ifndef UNITS_FAHRENHEIT
+#if !defined UNITS_FAHRENHEIT
   serialPrintln(FdegCelsius());
 #else
   serialPrintln(FdegFahrenheit());
@@ -285,7 +285,7 @@ template<int D> static void __attribute__ ((noinline)) serialPrintlnTemp(ospDeci
 static void __attribute__ ((noinline)) serialPrintlnFloatTemp(double val)
 {
   serialPrint(val);
-#ifndef UNITS_FAHRENHEIT
+#if !defined UNITS_FAHRENHEIT
   serialPrintln(FdegCelsius());
 #else
   serialPrintln(FdegFahrenheit());
@@ -348,7 +348,7 @@ static bool cmdStartProfile(const char *name)
   return false;
 }
 
-#ifndef ATMEGA_32kB_FLASH
+#if !defined ATMEGA_32kB_FLASH
 static void cmdPeek(int address)
 {
   byte val;
@@ -477,7 +477,7 @@ static void cmdExamineSettings()
     serialPrint(char('1' + i));
     serialPrintFcolon();
     serialPrint(setPoints[i]);
-#ifndef UNITS_FAHRENHEIT
+#if !defined UNITS_FAHRENHEIT
     serialPrint(FdegCelsius());
 #else
     serialPrint(FdegFahrenheit());

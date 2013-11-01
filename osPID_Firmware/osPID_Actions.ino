@@ -58,10 +58,15 @@ static void startAutoTune()
   switch (aTuneMethod) // or any other PI method
   {
     case ZIEGLER_NICHOLS_PID: 
+    case PESSEN_INTEGRAL_PID:
+    case SOME_OVERSHOOT_PID:
+    case NO_OVERSHOOT_PID:
+    case TYREUS_LUYBEN_PID:
+    case CIANCONE_MARLIN_PID:
       // and all other PID controllers
       break;
-    case ZIEGLER_NICHOLS_PI:
     default:  
+      // PI controllers
       // ensure that derivative gain is zero
       myPID.SetTunings(aTune.GetKp(), aTune.GetKi(), 0.0);
   }

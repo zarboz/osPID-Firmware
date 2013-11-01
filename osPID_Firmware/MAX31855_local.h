@@ -1,4 +1,4 @@
-#if !defined	MAX31855_H
+#if !defined MAX31855_H
 #define MAX31855_H
 
 #if	ARDUINO >= 100

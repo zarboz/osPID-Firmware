@@ -1,4 +1,4 @@
-#ifndef OneWire_h
+#if !defined OneWire_h
 #define OneWire_h
 
 #include <inttypes.h>
@@ -21,12 +21,12 @@
 // or a small but slow algorithm.
 
 // you can exclude onewire_search by defining that to 0
-#ifndef ONEWIRE_SEARCH
+#if !defined ONEWIRE_SEARCH
 #define ONEWIRE_SEARCH 1
 #endif
 
 // You can exclude CRC checks altogether by defining this to 0
-#ifndef ONEWIRE_CRC
+#if !defined ONEWIRE_CRC
 #define ONEWIRE_CRC 1
 #endif
 
@@ -35,13 +35,13 @@
 // about 250 bytes.  It does NOT consume RAM (but did in very
 // old versions of OneWire).  If you disable this, a slower
 // but very compact algorithm is used.
-#ifndef ONEWIRE_CRC8_TABLE
+#if !defined ONEWIRE_CRC8_TABLE
 #define ONEWIRE_CRC8_TABLE 1
 #endif
 
 // You can allow 16-bit CRC checks by defining this to 1
 // (Note that ONEWIRE_CRC must also be 1.)
-#ifndef ONEWIRE_CRC16
+#if !defined ONEWIRE_CRC16
 #define ONEWIRE_CRC16 1
 #endif
 
@@ -86,10 +86,10 @@
 #define DIRECT_MODE_OUTPUT(base, mask)  ((*((base)+4)) = (mask))
 #define DIRECT_WRITE_LOW(base, mask)    ((*((base)+13)) = (mask))
 #define DIRECT_WRITE_HIGH(base, mask)   ((*((base)+12)) = (mask))
-#ifndef PROGMEM
+#if !defined PROGMEM
 #define PROGMEM
 #endif
-#ifndef pgm_read_byte
+#if !defined pgm_read_byte
 #define pgm_read_byte(addr) (*(const uint8_t *)(addr))
 #endif
 

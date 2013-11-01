@@ -65,7 +65,7 @@ enum { buzzerPin = A5 };
 //    trip limits, and profile settings -- will not be upated
 //    if this setting is changed.
 #define UNITS_FAHRENHEIT
-#ifdef UNITS_FAHRENHEIT
+#if defined UNITS_FAHRENHEIT
 const bool unitsFahrenheit = true;
 #else
 const bool unitsFahrenheit = false;
@@ -83,16 +83,8 @@ const bool unitsFahrenheit = false;
 
 // NB test compilation length using longest options: #undef USE_SIMULATOR and SHORTER, #define UNITS_FAHRENHEIT
 
-// available auto tune methods
-enum
-{
-  ZIEGLER_NICHOLS_PI = 0,
-  ZIEGLER_NICHOLS_PID,
-  LAST_AUTO_TUNE_METHOD = ZIEGLER_NICHOLS_PID
-};
-
 // default auto tune algorithm and parameters
-#define AUTO_TUNE_DEFAULT_METHOD                ZIEGLER_NICHOLS_PI
+#define AUTO_TUNE_DEFAULT_METHOD                0       // ZIEGLER_NICHOLS_PI
 #define AUTO_TUNE_DEFAULT_OUTPUT_STEP           20
 #define AUTO_TUNE_DEFAULT_NOISE_BAND_CELSIUS    0.5
 #define AUTO_TUNE_DEFAULT_LOOKBACK_SEC          10
