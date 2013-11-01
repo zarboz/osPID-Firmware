@@ -81,7 +81,7 @@ const bool unitsFahrenheit = false;
 // necessary omissions to compil on Atmega microcontrollers with 32 kB flash
 #define ATMEGA_32kB_FLASH
 
-// NB test compilation length using longest options: #undef USE_SIMULATOR and SHORTER, #define UNITS_FAHRENHEIT
+// NB test compilation length using longest options: #undef STANDALONE_CONTROLLER, USE_SIMULATOR, SILENCE_BUZZER, and #define UNITS_FAHRENHEIT
 
 // default auto tune algorithm and parameters
 #define AUTO_TUNE_DEFAULT_METHOD                0       // ZIEGLER_NICHOLS_PI

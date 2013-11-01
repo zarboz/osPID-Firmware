@@ -8,7 +8,6 @@
 #include "WProgram.h"
 #endif
 
-#include "PID_types_local.h"
 #include "ospConfig.h"
 
 // verbose debug option
@@ -57,6 +56,31 @@
 // auto tune terminates if waiting too long between peaks or relay steps
 // set larger value for processes with long delays or time constants
 #define AUTOTUNE_MAX_WAIT_MINUTES 5
+
+#include "PID_types_local.h"
+
+enum {
+  KP_DIVISOR = 0,
+  TI_DIVISOR,
+  TD_DIVISOR
+};
+
+// Ziegler-Nichols type auto tune rules
+// in tabular form
+struct Tuning
+{
+  byte _divisor[3];
+  
+  bool PI_controller()
+  {
+    return pgm_read_byte_near(_divisor[2]) == 0;
+  }
+  
+  double divisor(byte index)  
+  {
+    return (double)pgm_read_byte_near(_divisor[index]) * 0.05;
+  }
+};
 
 class PID_ATune
 {
@@ -114,11 +138,12 @@ private:
   double lastInputs[101];               // * process values, most recent in array element 0
   byte inputCount;
   double outputStart;
+  double inducedAmplitude;
   double Kp, Ti, Td;
 
 #if defined AUTOTUNE_AMIGOF_PI  
-  bool CheckStable();                   // * check whether recent inputs have similar values
   double CalculatePhaseLag(double);     // * calculate phase lag from noiseBand and inducedAmplitude
+  double fastArcTan(double);
   double originalNoiseBand;
   double newNoiseBand;
   double K_process;
@@ -126,8 +151,6 @@ private:
   
 #if defined AUTOTUNE_RELAY_BIAS  
   double relayBias;
-  double avgStep1;
-  double avgStep2;
   unsigned long lastStepTime[5];        // * step time, most recent in array element 0
   double sumInputSinceLastStep[5];      // * integrated process values, most recent in array element 0
   byte stepCount;

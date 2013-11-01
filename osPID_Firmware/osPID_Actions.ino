@@ -3,10 +3,12 @@
 #include "ospConfig.h"
 #include "ospProfile.h"
 #include "ospAssert.h"
+#include "PID_AutoTune_v0_local.h"
 
 #undef BUGCHECK
 #define BUGCHECK() ospBugCheck(PSTR("PROF"), __LINE__);
 
+extern Tuning tuningRule[NO_OVERSHOOT_PID + 1];
 
 // a program invariant has been violated: suspend the controller and
 // just flash a debugging message until the unit is power cycled
@@ -55,20 +57,9 @@ static void startAutoTune()
   }
   aTune.SetOutputStep(double(s));
   
-  switch (aTuneMethod) // or any other PI method
+  if (tuningRule[aTuneMethod].PI_controller())
   {
-    case ZIEGLER_NICHOLS_PID: 
-    case PESSEN_INTEGRAL_PID:
-    case SOME_OVERSHOOT_PID:
-    case NO_OVERSHOOT_PID:
-    case TYREUS_LUYBEN_PID:
-    case CIANCONE_MARLIN_PID:
-      // and all other PID controllers
-      break;
-    default:  
-      // PI controllers
-      // ensure that derivative gain is zero
-      myPID.SetTunings(aTune.GetKp(), aTune.GetKi(), 0.0);
+    myPID.SetTunings(aTune.GetKp(), aTune.GetKi(), 0.0);
   }
  
   myPID.SetMode(MANUAL);

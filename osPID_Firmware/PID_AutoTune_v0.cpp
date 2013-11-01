@@ -1,5 +1,34 @@
 #include "PID_AutoTune_v0_local.h"
 
+// source of Tyreus-Luyben and Ciancone-Marlin rules:
+// "Autotuning of PID Controllers: A Relay Feedback Approach",
+//  by Cheng-Ching Yu, 2nd Edition, p.18
+// Tyreus-Luyben is more conservative than Ziegler-Nichols
+// and is preferred for lag dominated processes
+// Ciancone-Marlin is preferred for delay dominated processes
+// Ziegler-Nichols is intended for best disturbance rejection
+// can lack robustness especially for lag dominated processes
+
+// source for Pessen Integral, Some Overshoot, and No Overshoot rules:
+// "Rule-Based Autotuning Based on Frequency Domain Identification" 
+// by Anthony S. McCormack and Keith R. Godfrey
+// IEEE Transactions on Control Systems Technology, vol 6 no 1, January 1998.
+// as reported on http://www.mstarlabs.com/control/znrule.html
+
+// order must be match enumerated type for auto tune methods
+PROGMEM Tuning tuningRule[NO_OVERSHOOT_PID + 1] =
+{  
+  {  44, 24,   0 },  // ZIEGLER_NICHOLS_PI
+  {  34, 40, 160 },  // ZIEGLER_NICHOLS_PID
+  {  64,  9,   0 },  // TYREUS_LUYBEN_PI
+  {  44,  9, 126 },  // TYREUS_LUYBEN_PID
+  {  66, 80,   0 },  // CIANCONE_MARLIN_PI
+  {  66, 88, 162 },  // CIANCONE_MARLIN_PID
+  {  28, 50, 133 },  // PESSEN_INTEGRAL_PID
+  {  60, 40,  60 },  // SOME_OVERSHOOT_PID
+  { 100, 40,  60 }   // NO_OVERSHOOT_PID
+};
+
 PID_ATune::PID_ATune(double* Input, double* Output)
 {
   input = Input;
@@ -24,53 +53,28 @@ void PID_ATune::Cancel()
 }
 
 #if defined AUTOTUNE_AMIGOF_PI
-// check that recent inputs are equal
-// give or take expected noise
-bool PID_ATune::CheckStable()
+double inline PID_ATune::fastArcTan(double x)
 {
-  double iMax = lastInputs[0];
-  double iMin = lastInputs[0];
-  for (byte i = 0; i <= inputCount; i++)
-  {
-    if (iMax < lastInputs[i])
-    {
-      iMax = lastInputs[i];
-    }
-    if (iMin > lastInputs[i])
-    {
-      iMin = lastInputs[i];
-    }
-  } 
-
-#if defined AUTOTUNE_DEBUG  
-  Serial.print(F("iMax "));
-  Serial.println(iMax);
-  Serial.print(F("iMin "));
-  Serial.println(iMin);
-  Serial.print(F("stable "));
-  Serial.println((iMax - iMin) <= 2.0 * noiseBand);
-#endif 
-
-#if defined AUTOTUNE_DITHER
-  return ((iMax - iMin) <= 2.0 * noiseBand + 2.0 * dither);
-#else
-  return ((iMax - iMin) <= 2.0 * noiseBand);
-#endif
-
+  // source: “Efficient approximations for the arctangent function”, Rajan, S. Sichun Wang Inkol, R. Joyal, A., May 2006
+  //return CONST_PI / 4.0 * x - x * (abs(x) - 1.0) * (0.2447 + 0.0663 * abs(x));
+  
+  // source: "Understanding Digital Signal Processing", 2nd Ed, Richard G. Lyons, eq. 13-107
+  return x / (1.0 + 0.28125 * pow(x, 2));
 }
 
 double PID_ATune::CalculatePhaseLag(double inducedAmplitude)
 { 
   // calculate phase lag
   // NB hysteresis = 2 * noiseBand;
-  double ratio = 2.0 * noiseBand > inducedAmplitude;
+  double ratio = 2.0 * noiseBand / inducedAmplitude;
   if (ratio > 1.0)
   {
     return CONST_PI / 2.0;
   }
   else
   {
-    return CONST_PI - asin(2.0 * noiseBand / inducedAmplitude);
+    //return CONST_PI - asin(ratio);
+    return CONST_PI - fastArcTan(ratio / sqrt( 1.0 - pow(ratio, 2)));
   }
 }
 #endif // if defined AUTOTUNE_AMIGOF_PI
@@ -170,8 +174,8 @@ bool PID_ATune::Runtime()
     // and introduce relay bias if necessary
     if (stepCount > 4)
     {
-      avgStep1 = 0.5 * (double) ((lastStepTime[0] - lastStepTime[1]) + (lastStepTime[2] - lastStepTime[3]));
-      avgStep2 = 0.5 * (double) ((lastStepTime[1] - lastStepTime[2]) + (lastStepTime[3] - lastStepTime[4]));
+      double avgStep1 = 0.5 * (double) ((lastStepTime[0] - lastStepTime[1]) + (lastStepTime[2] - lastStepTime[3]));
+      double avgStep2 = 0.5 * (double) ((lastStepTime[1] - lastStepTime[2]) + (lastStepTime[3] - lastStepTime[4]));
       if ((avgStep1 > 1e-10) && (avgStep2 > 1e-10))
       {
         double asymmetry = (avgStep1 > avgStep2) ?
@@ -190,10 +194,9 @@ bool PID_ATune::Runtime()
           //  by Cheng-Ching Yu, 2nd Edition, equation 7.39, p. 148
 
           // calculate change in relay bias
-          double deltaRelayBias = - processValueOffset() * oStep;
+          double deltaRelayBias = - processValueOffset(avgStep1, avgStep2) * oStep;
           if (state == RELAY_STEP_DOWN)
           {
-            // FIXME check sign
             deltaRelayBias = -deltaRelayBias;
           }
           
@@ -203,10 +206,10 @@ bool PID_ATune::Runtime()
             relayBias += deltaRelayBias;
           
 #if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
-        Serial.print(F("deltaRelayBias "));
-        Serial.println(deltaRelayBias);
-        Serial.print(F("relayBias "));
-        Serial.println(relayBias);
+            Serial.print(F("deltaRelayBias "));
+            Serial.println(deltaRelayBias);
+            Serial.print(F("relayBias "));
+            Serial.println(relayBias);
 #endif
 
             // reset relay step counter
@@ -248,19 +251,23 @@ bool PID_ATune::Runtime()
   // to pass entire PID object to autotune method(s)
   if (((byte) state & (STEADY_STATE_AFTER_STEP_UP | RELAY_STEP_UP)) > 0)
   {
+    
 #if defined AUTOTUNE_RELAY_BIAS    
     *output = outputStart + oStep + relayBias;
 #else    
     *output = outputStart + oStep;
 #endif    
+
   }
   else if (state == RELAY_STEP_DOWN)
   {
+    
 #if defined AUTOTUNE_RELAY_BIAS    
     *output = outputStart - oStep + relayBias;
 #else
     *output = outputStart - oStep;
 #endif
+
   }
   
 #if defined AUTOTUNE_DEBUG
@@ -284,8 +291,7 @@ bool PID_ATune::Runtime()
     return false;
   }
 
-  // identify peaks
-  // and shift array of process values
+  // shift array of process values and identify peaks
   inputCount = nLookBack;
   bool isMax = true;
   bool isMin = true;
@@ -313,23 +319,47 @@ bool PID_ATune::Runtime()
   {
     // check that all the recent inputs are 
     // equal give or take expected noise
-    if (CheckStable())
+    double iMax = lastInputs[0];
+    double iMin = lastInputs[0];
+    double avgInput = 0.0;
+    for (byte i = 0; i <= inputCount; i++)
     {
+      double val = lastInputs[i];
+      if (iMax < val)
+      {
+        iMax = val;
+      }
+        if (iMin > val)
+      {
+        iMin = val;
+      }
+      avgInput += val;
+    } 
+    avgInput /= (double)(inputCount + 1);
+    
+#if defined AUTOTUNE_DEBUG  
+  Serial.print(F("iMax "));
+  Serial.println(iMax);
+  Serial.print(F("iMin "));
+  Serial.println(iMin);
+  Serial.print(F("avgInput ")); 
+  Serial.println(avgInput); 
+  Serial.print(F("stable "));
+  Serial.println((iMax - iMin) <= 2.0 * noiseBand);
+#endif 
 
-#if defined AUTOTUNE_RELAY_BIAS      
-      lastStepTime[0] = now;
+    // if recent inputs are stable
+    
+#if defined AUTOTUNE_DITHER
+    if ((iMax - iMin) <= 2.0 * (noiseBand + dither))
+#else
+    if ((iMax - iMin) <= 2.0 * noiseBand)
 #endif
 
-      double avgInput = 0.0;
-      for (byte i = 0; i <= inputCount; i++)
-      {
-        avgInput += lastInputs[i];
-      }
-      avgInput /= inputCount + 1;
-
-#if defined AUTOTUNE_DEBUG
-      Serial.print(F("avgInput ")); 
-      Serial.println(avgInput); 
+    {
+      
+#if defined AUTOTUNE_RELAY_BIAS      
+      lastStepTime[0] = now;
 #endif
 
       if (state == STEADY_STATE_AT_BASELINE)
@@ -348,6 +378,7 @@ bool PID_ATune::Runtime()
       Serial.println(K_process);
 #endif
 
+      // bad estimate of process gain
       if (K_process < 1e-10) // zero
       {
         state = AUTOTUNER_OFF;
@@ -374,27 +405,19 @@ bool PID_ATune::Runtime()
   justChanged = false;
   if (isMax)
   {
-    if (peakType == NOT_A_PEAK)
-    {
-      peakType = MAXIMUM;
-    }
     if (peakType == MINIMUM)
     {
-      peakType = MAXIMUM;
       justChanged = true;
     }
+    peakType = MAXIMUM;
   }
   else if (isMin)
   {
-    if (peakType == NOT_A_PEAK)
-    {
-      peakType = MINIMUM;
-    }
     if (peakType == MAXIMUM)
     {
-      peakType = MINIMUM;
       justChanged = true;
     }
+    peakType = MINIMUM;
   }
 
   // update peak times and values
@@ -407,7 +430,9 @@ bool PID_ATune::Runtime()
     Serial.println(peakCount);
     Serial.println(F("peaks"));
     for (byte i = 0; i < (peakCount > 4 ? 5 : peakCount); i++)
+    {
       Serial.println(lastPeaks[i]);
+    }
 #endif
 
     // shift peak time and peak value arrays
@@ -437,7 +462,9 @@ bool PID_ATune::Runtime()
     Serial.println();
     Serial.println(F("lastInputs:"));
     for (byte i = 0; i <= inputCount; i++)
+    {
       Serial.println(lastInputs[i]);
+    }
     Serial.println();
 #endif
 
@@ -461,14 +488,15 @@ bool PID_ATune::Runtime()
     double absMin = lastPeaks[1];
     for (byte i = 2; i <= 4; i++)
     {
-      inducedAmplitude += abs(lastPeaks[i] - lastPeaks[i - 1]); 
-      if (absMax < lastPeaks[i])
+      double val = lastPeaks[i];
+      inducedAmplitude += abs( val - lastPeaks[i - 1]); 
+      if (absMax < val)
       {
-         absMax = lastPeaks[i];
+         absMax = val;
       }
-      if (absMin > lastPeaks[i])
+      if (absMin > val)
       {
-         absMin = lastPeaks[i];
+         absMin = val;
       }
     }
     inducedAmplitude /= 6.0;
@@ -496,13 +524,13 @@ bool PID_ATune::Runtime()
       phaseLag = CalculatePhaseLag(inducedAmplitude);
 
 #if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
-      Serial.print(F("phase lag "));u
+      Serial.print(F("phase lag "));
       Serial.println(phaseLag / CONST_PI * 180.0);
 #endif
 
       // check that phase lag is within acceptable bounds, ideally between 120° and 140°
       // but 115° to 145° will just about do, and might converge quicker
-      if ((2.0 * noiseBand >= inducedAmplitude) || abs(phaseLag / CONST_PI * 180.0 - 130.0) > 15.0)
+      if (abs(phaseLag - CONST_PI * 130.0 / 180.0) > (CONST_PI * 15.0 / 180.0))
       {
         // phase lag outside the desired range
         // set noiseBand to new estimate
@@ -533,7 +561,7 @@ bool PID_ATune::Runtime()
 #endif // if defined AUTOTUNE_AMIGOF_PI    
 
     // check convergence criterion for amplitude of induced oscillation
-    if ((0.5 * (absMax - absMin) - inducedAmplitude) / inducedAmplitude < AUTOTUNE_PEAK_AMPLITUDE_TOLERANCE)
+    if (((0.5 * (absMax - absMin) - inducedAmplitude) / inducedAmplitude) < AUTOTUNE_PEAK_AMPLITUDE_TOLERANCE)
     {
       state = CONVERGED;
     }
@@ -591,36 +619,29 @@ bool PID_ATune::Runtime()
 
 #if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
   Serial.print(F("ultimate gain "));
-  Serial.println(1 / Ku);
+  Serial.println(1.0 / Ku);
 #endif
 
   // calculate ultimate period in seconds
-  double Pu = (double) (lastPeakTime[0] - lastPeakTime[2]) / 1000.0;  
+  double Pu = (double) 0.5 * ((lastPeakTime[1] - lastPeakTime[3]) + (lastPeakTime[2] - lastPeakTime[4])) / 1000.0;  
   
 #if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
   Serial.print(F("ultimate period "));
   Serial.println(Pu);
 #endif 
 
-
-#if defined AUTOTUNE_AMIGOF_PI
-  double kappa_phi;
-#endif  
-
   // calculate gain parameters using tuning rules
   // NB PID generally outperforms PI for lag-dominated processes
-  switch(controlType)
-  {
     
 #if defined AUTOTUNE_AMIGOF_PI
   // AMIGOf is slow to tune, especially for lag-dominated processes, because it
   // requires an estimate of the process gain which is implemented in this
   // routine by steady state change in process variable after step change in set point
   // It is intended to give robust tunings for both lag- and delay- dominated processes
-  case AMIGOF_PI:
-  
+  if (controlType == AMIGOF_PI)
+  {
     // calculate gain ratio
-    kappa_phi = (1 / Ku) / K_process;
+    double kappa_phi = (1.0 / Ku) / K_process;
 
 #if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
   Serial.print(F("gain ratio kappa "));
@@ -643,84 +664,22 @@ bool PID_ATune::Runtime()
     Kp = (( 2.50 - 0.92 * phaseLag) / (1.0 + (10.75 - 4.01 * phaseLag) * kappa_phi)) * Ku;
     Ti = ((-3.05 + 1.72 * phaseLag) / pow(1.0 + (-6.10 + 3.44 * phaseLag) * kappa_phi, 2)) * Pu;
     Td = 0.0;
-    break;
+    
+    // converged
+    return true;
+  }
 #endif // if defined AUTOTUNE_AMIGOF_PI    
 
-  // source for Pessen Integral, Some Overshoot, and No Overshoot rules:
-  // "Rule-Based Autotuning Based on Frequency Domain Identification" 
-  // by Anthony S. McCormack and Keith R. Godfrey
-  // IEEE Transactions on Control Systems Technology, vol 6 no 1, January 1998.
-  // as reported on http://www.mstarlabs.com/control/znrule.html
-  // These are modifications of Ziegler-Nichols
-  case PESSEN_INTEGRAL_PID:
-    Kp = 0.7   * Ku;
-    Ti = 0.4   * Pu;
-    Td = 0.15  * Pu;
-    break;
-
-  case SOME_OVERSHOOT_PID:
-    Kp = 0.33  * Ku;
-    Ti = 0.5   * Pu;
-    Td = 0.33  * Pu;
-    break;
-
-  case NO_OVERSHOOT_PID:
-    Kp = 0.2   * Ku;
-    Ti = 0.5   * Pu;
-    Td = 0.33  * Pu;
-    break;
-
-  // source of Tyreus-Luyben and Ciancone-Marlin rules:
-  // "Autotuning of PID Controllers: A Relay Feedback Approach",
-  //  by Cheng-Ching Yu, 2nd Edition, p.18
-  // Tyreus-Luyben is more conservative than Ziegler-Nichols
-  // and is preferred for lag dominated processes
-  case TYREUS_LUYBEN_PI: 
-    Kp = Ku / 3.2;
-    Ti = Pu / 0.45;
-    Td = 0.0;  
-    break;
-
-  case TYREUS_LUYBEN_PID: 
-    Kp = Ku / 2.2;
-    Ti = Pu / 0.45;
-    Td = Pu / 6.3;  
-    break;
-
-  // Ciancone-Marlin is preferred for delay dominated processes
-  case CIANCONE_MARLIN_PID: 
-    Kp = Ku / 3.3;
-    Ti = Pu / 4.4;
-    Td = Pu / 8.1;  
-    break;
-
-  case CIANCONE_MARLIN_PI: 
-    Kp = Ku / 3.3;
-    Ti = Pu / 4.0;
-    Td = 0.0;  
-    break;
-
-  // Ziegler-Nichols is intended for best disturbance rejection
-  // can lack robustness especially for lag dominated processes
-  case ZIEGLER_NICHOLS_PID: 
-    Kp = 0.6   * Ku;
-    Ti = 0.5   * Pu;
-    Td = 0.125 * Pu;
-    break;
-
-  case ZIEGLER_NICHOLS_PI: 
-  default:
-    Kp = 0.45  * Ku;
-    Ti = Pu / 1.2;
-    Td = 0.0;
-  }
+  Kp = Ku / tuningRule[controlType].divisor(KP_DIVISOR);
+  Ti = Pu / tuningRule[controlType].divisor(TI_DIVISOR);
+  Td = tuningRule[controlType].PI_controller() ? 0.0 : Pu / tuningRule[controlType].divisor(TD_DIVISOR);
 
   // converged
   return true;
 }
 
 #if defined AUTOTUNE_RELAY_BIAS
-double PID_ATune::processValueOffset()
+double PID_ATune::processValueOffset(double avgStep1, double avgStep2)
 {
   // calculate offset of oscillation in process value
   // as a proportion of the amplitude
@@ -802,7 +761,6 @@ double PID_ATune::processValueOffset()
   if (discriminant < 1e-10)
   {
     // catch negative values
-    //return 0.0;
     discriminant = 0.0;
   }
 

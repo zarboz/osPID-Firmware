@@ -275,21 +275,25 @@ template<int D> static void __attribute__ ((noinline)) serialPrintln(ospDecimalV
 template<int D> static void __attribute__ ((noinline)) serialPrintlnTemp(ospDecimalValue<D> val)
 {
   serialPrint(val);
+  
 #if !defined UNITS_FAHRENHEIT
   serialPrintln(FdegCelsius());
 #else
   serialPrintln(FdegFahrenheit());
 #endif
+
 }
 
 static void __attribute__ ((noinline)) serialPrintlnFloatTemp(double val)
 {
   serialPrint(val);
+  
 #if !defined UNITS_FAHRENHEIT
   serialPrintln(FdegCelsius());
 #else
   serialPrintln(FdegFahrenheit());
 #endif
+
 }
 
 static void __attribute__ ((noinline)) serialPrintFAutotuner()
@@ -477,11 +481,13 @@ static void cmdExamineSettings()
     serialPrint(char('1' + i));
     serialPrintFcolon();
     serialPrint(setPoints[i]);
+    
 #if !defined UNITS_FAHRENHEIT
     serialPrint(FdegCelsius());
 #else
     serialPrint(FdegFahrenheit());
 #endif
+
     if (i & 1)
     {
       Serial.println();
@@ -646,9 +652,11 @@ PROGMEM SerialCommandParseData commandParseData[] =
   { 'E', ARGS_STRING },
   { 'I', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'J', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
+  
 #if !defined ATMEGA_32kB_FLASH
   { 'K', ARGS_ONE_NUMBER },
 #endif
+
   { 'L', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
   { 'M', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
   { 'N', ARGS_STRING | ARGS_FLAG_QUERYABLE },
@@ -668,9 +676,11 @@ PROGMEM SerialCommandParseData commandParseData[] =
   { 'c', ARGS_FLAG_QUERYABLE },
   { 'd', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'i', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
+  
 #if !defined ATMEGA_32kB_FLASH
   { 'k', ARGS_TWO_NUMBERS },
 #endif
+
   { 'l', ARGS_ONE_NUMBER | ARGS_FLAG_QUERYABLE },
   { 'm', ARGS_ONE_NUMBER | ARGS_FLAG_QUERYABLE },
   { 'o', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
@@ -921,11 +931,13 @@ static void processSerialCommand()
     // p now points to the #String
     break;
   default:
+  
 #if !defined ATMEGA_32kB_FLASH
     BUGCHECK();
 #else    
     ;
 #endif
+
   }
 
   // perform bounds checking
@@ -1056,6 +1068,7 @@ static void processSerialCommand()
     setPointIndex = i1;
     updateActiveSetPoint();
     break;
+    
 #if !defined ATMEGA_32kB_FLASH  
   case 'K': // memory peek
     cmdPeek(i1);
@@ -1066,6 +1079,7 @@ static void processSerialCommand()
     cmdPoke(i2, i1);
     goto out_ACK; // no EEPROM writeback needed
 #endif    
+
   case 'l': // set trip lower limit
     {
       if (!trySetTemp(&lowerTripLimit, i1, d1))
@@ -1191,9 +1205,11 @@ static void processSerialCommand()
       goto out_EMOD;
     }
     tripped = false;
+    
 #if !defined SILENCE_BUZZER    
     buzzOff;
 #endif    
+
     goto out_ACK; // no EEPROM writeback needed
   case 't': // set trip auto-reset
     tripAutoReset = i1;
@@ -1217,12 +1233,14 @@ static void processSerialCommand()
     displayWindow = window;
     break;
   case 'X': // examine: dump the controller settings
+  
 #if !defined ATMEGA_32kB_FLASH
     cmdExamineSettings();
     goto out_ACK; // no EEPROM writeback needed
 #else
     goto out_EINV;
 #endif
+
   case 'x': // examine a profile: dump a description of the give profile
     cmdExamineProfile(i1);
     goto out_ACK; // no EEPROM writeback needed
