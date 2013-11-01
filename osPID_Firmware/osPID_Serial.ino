@@ -580,10 +580,12 @@ static void cmdExamineProfile(byte profileIndex)
 
   serialPrintProfileName(profileIndex);
   Serial.println();
-
+  
+  /*
   serialPrint(F("Checksum: "));
   serialPrintln(getProfileCrc(profileIndex));
-
+  */
+  
   for (byte i = 0; i < ospProfile::NR_STEPS; i++)
   {
     serialPrintProfileState(profileIndex, i);
@@ -874,7 +876,7 @@ static void processSerialCommand()
       break;
     case 'W':
       serialPrint(theOutputDevice.getOutputWindowSeconds());
-      serialPrintln(" seconds");
+      serialPrintln(F(" sec"));
       break;
     default:
       goto out_EINV;
@@ -1178,8 +1180,7 @@ static void processSerialCommand()
     }
 
     clearEEPROM();
-    serialPrintln(F("Memory marked for reset."));
-    serialPrintln(F("Reset the unit to complete."));
+    serialPrintln(F("Memory marked for reset, now restart."));
     goto out_ACK; // no EEPROM writeback needed or wanted!
   case 'S': // change the setpoint
     {

@@ -15,12 +15,8 @@
 #undef AUTOTUNE_DEBUG
 
 // AMIGOf tuning rule
-// may not have space for this
-#if defined ATMEGA_32kB_FLASH
-#  define AUTOTUNE_AMIGOF_PI //undef
-#else
-#  define AUTOTUNE_AMIGOF_PI
-#endif
+// we have made space for this, yay!
+#define AUTOTUNE_AMIGOF_PI
 
 // defining this option implements relay bias
 // this is useful to adjust the relay output values
