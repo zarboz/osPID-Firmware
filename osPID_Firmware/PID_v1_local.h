@@ -1,6 +1,6 @@
 #if !defined PID_v1_h
 #define PID_v1_h
-#define LIBRARY_VERSION	1.0.0
+#define PID_LIBRARY_VERSION	1.0.0
 
 #include "ospDecimalValue.h"
 

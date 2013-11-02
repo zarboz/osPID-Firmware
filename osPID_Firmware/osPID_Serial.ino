@@ -1,5 +1,7 @@
 /* This file contains the routines implementing serial-port (i.e. USB) communications
    between the controller and a command computer */
+   
+#if !defined STANDALONE_CONTROLLER
 
 #include <math.h>
 #include <avr/pgmspace.h>
@@ -9,6 +11,9 @@
 
 #undef BUGCHECK
 #define BUGCHECK() ospBugCheck(PSTR("COMM"), __LINE__);
+
+// prototype definition
+extern int pow10(byte);
 
 /* The serial command format for the controller is meant to be human-readable.
 It consists of a one-letter command mnemonic, followed by one or more parameter values
@@ -133,6 +138,14 @@ or
 . Profiles _must_ be saved before they can be executed.
 */
 
+ /*******************************************************************************
+ *
+ *
+ *                              COMMAND  FUNCTIONS
+ *
+ *
+ *******************************************************************************/
+
 
 // not static because called from elsewhere
 void setupSerial()
@@ -193,16 +206,6 @@ end_of_number:
   }
 }
 
-static int pow10(byte n)
-{
-  int result = 1;
-
-  while (n--)
-    result *= 10;
-
-  return result;
-}
-
 static int coerceToDecimal(long val, byte currentDecimals, byte desiredDecimals)
 {
   if (currentDecimals < desiredDecimals)
@@ -245,7 +248,6 @@ template<typename T> static void __attribute__((noinline)) serialPrint(T t)
   Serial.print(t);
   realtimeLoop();
 }
-
 
 template<typename T> static void __attribute__((noinline)) serialPrintln(T t)
 {
@@ -618,6 +620,14 @@ static bool __attribute__ ((noinline)) trySetTemp(ospDecimalValue<1> *p, long va
   return true;
 }
 
+ /*******************************************************************************
+ *
+ *
+ *                               COMMAND  PARSER
+ *
+ *
+ *******************************************************************************/
+
 // The command line parsing is table-driven, which saves more than 1.5 kB of code
 // space.
 
@@ -730,13 +740,11 @@ static byte argsForMnemonic(char mnemonic)
     }
   }
 }
-
-
   
 // this is the entry point to the serial command processor: it is called
 // when '\n' or '\r' has been received over the serial connection, and therefore
 // a full command is buffered in serialCommandBuffer, terminating in '\n'
-static void processSerialCommand()
+void processSerialCommand()
 {
   const char *p = &serialCommandBuffer[1], *p2;
   long i1, i2, i3;
@@ -1282,3 +1290,4 @@ out_EMOD:
   return;
 }
 
+#endif

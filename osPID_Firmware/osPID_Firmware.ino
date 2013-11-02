@@ -1,20 +1,3 @@
-//* This file contains the setup() and loop() logic for the controller. */
-
-#include <Arduino.h>
-#include <LiquidCrystal.h>
-#include <avr/pgmspace.h>
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include "ospConfig.h"
-#include "ospDecimalValue.h"
-#include "PID_v1_local.h"
-#include "PID_AutoTune_v0_local.h"
-#include "ospAnalogButton.h"
-#include "ospProfile.h"
-
-#undef BUGCHECK
-#define BUGCHECK() ospBugCheck(PSTR("MAIN"), __LINE__);
-
 /*******************************************************************************
  * The stripboard PID Arduino shield uses firmware based on the osPID but
  * simplified hardware. Instead of swappable output cards there is a simple
@@ -39,29 +22,81 @@
  * the input and output device and simulates the controller being attached to a
  * simple system.
  *******************************************************************************/
+ 
+ /*******************************************************************************
+ *
+ *
+ *                          INCLUDES  &  DEFINES
+ *
+ *
+ *******************************************************************************/
 
+#include <Arduino.h>
+#include <LiquidCrystal.h>
+#include <avr/pgmspace.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include "ospConfig.h"
+#include "ospDecimalValue.h"
+#include "PID_v1_local.h"
+#include "PID_AutoTune_v0_local.h"
+#include "ospAnalogButton.h"
+#include "ospProfile.h"
 
+#undef BUGCHECK
+#define BUGCHECK() ospBugCheck(PSTR("MAIN"), __LINE__);
 
 #if !defined USE_SIMULATOR
 #include "ospOutputDeviceSsr.h"
 #include "ospInputDevice.h"
-const byte numInputDevices = 3;
-const byte numOutputDevices = 1;
 ospInputDevice theInputDevice;
 ospOutputDeviceSsr theOutputDevice;
 #else
 #include "ospSimulator.h"
-const byte numInputDevices = 1;
-const byte numOutputDevices = 1;
 ospSimulator theInputDevice;
 #define theOutputDevice theInputDevice
 #endif
 
+#define MINIMUM(a,b) (((a)<(b))?(a):(b))
+#define MAXIMUM(a,b) (((b)>(a))?(a):(b))
 
+ /*******************************************************************************
+ *
+ *
+ *                          PROTOTYPE DEFINITIONS
+ *
+ *
+ *******************************************************************************/
+
+extern void __attribute__ ((noinline)) LCDprintln(const char* s);
+extern void drawStartupBanner();
+extern void setupEEPROM();
+extern void setupSerial();
+extern bool profileWasInterrupted();
+extern void drawResumeProfileBanner();
+extern bool startCurrentProfileStep();
+extern void recordProfileCompletion();
+extern bool okKeyLongPress();
+extern void backKeyPress();
+extern void updownKeyPress(bool);
+extern void okKeyPress();
+extern void stopAutoTune();
+extern void markSettingsDirty();
+extern void profileLoopIteration();
+extern void drawMenu();
+extern void saveEEPROMSettings();
+extern void processSerialCommand();
+
+ /*******************************************************************************
+ *
+ *
+ *                        GLOBAL VARIABLE INITIALIZATION
+ *
+ *
+ *******************************************************************************/
 
 // we use the LiquidCrystal library to drive the LCD screen
 LiquidCrystal theLCD(lcdRsPin, lcdEnablePin, lcdD0Pin, lcdD1Pin, lcdD2Pin, lcdD3Pin);
-extern void __attribute__ ((noinline)) LCDprintln(const PROGMEM char* s);
 
 // our AnalogButton library provides debouncing and interpretation
 // of the analog-multiplexed button channel
@@ -120,6 +155,7 @@ ospDecimalValue<1> lowerTripLimit = { 0 } , upperTripLimit = { 1250 };
 #else
 ospDecimalValue<1> lowerTripLimit = { 0 } , upperTripLimit = { 2600 };
 #endif
+
 bool tripLimitsEnabled;
 bool tripped;
 bool tripAutoReset;
@@ -153,34 +189,21 @@ unsigned long now, lcdTime, readInputTime;
 extern void drawNotificationCursor(char icon);
 
 // some constants in flash memory, for reuse
-
 #if !defined UNITS_FAHRENHEIT
 const __FlashStringHelper *FdegCelsius() { return F(" °C"); }
 #else
 const __FlashStringHelper *FdegFahrenheit() { return F(" °F"); }
 #endif
 
-const PROGMEM char Pprofile[] = "Profile ";
+PROGMEM const char Pprofile[] = "Profile ";
 
-char hex(byte b)
-{
-  return ((b < 10) ? (char) ('0' + b) : (char) ('A' - 10 + b));
-}
-
-void __attribute__ ((noinline)) updateTimer()
-{
-  now = millis();
-}
-
-// check time avoiding overflow
-bool __attribute__ ((noinline)) after(unsigned long targetTime)
-{
-  unsigned long u = (targetTime - now);
-  return ((u & 0x80000000) > 0);
-}
-
-#define MINIMUM(a,b) (((a)<(b))?(a):(b))
-#define MAXIMUM(a,b) (((b)>(a))?(a):(b))
+ /*******************************************************************************
+ *
+ *
+ *                     INTERRUPT SERVICE ROUTINE FOR BUZZER
+ *
+ *
+ *******************************************************************************/
 
 #if !defined SILENCE_BUZZER
 // buzzer 
@@ -223,6 +246,31 @@ ISR (TIMER2_COMPA_vect)
 }
 #endif
 
+ /*******************************************************************************
+ *
+ *
+ *                         FUNCTION  INITIALIZATION
+ *
+ *
+ *******************************************************************************/
+
+char hex(byte b)
+{
+  return ((b < 10) ? (char) ('0' + b) : (char) ('A' - 10 + b));
+}
+
+void __attribute__ ((noinline)) updateTimer()
+{
+  now = millis();
+}
+
+// check time avoiding overflow
+bool __attribute__ ((noinline)) after(unsigned long targetTime)
+{
+  unsigned long u = (targetTime - now);
+  return ((u & 0x80000000) > 0);
+}
+
 void __attribute__((noinline)) setOutputToManualOutput()
 {
   output = double(manualOutput);
@@ -230,11 +278,17 @@ void __attribute__((noinline)) setOutputToManualOutput()
 
 void __attribute__((noinline)) updateActiveSetPoint()
 {
-  activeSetPoint = double(setPoints[setPointIndex]);
+  displaySetpoint = setPoints[setPointIndex];
+  activeSetPoint = double(displaySetpoint);
 }
 
-
-
+ /*******************************************************************************
+ *
+ *
+ *                        CONTROLLER  INITIALIZATION
+ *
+ *
+ *******************************************************************************/
 
 // initialize the controller: this is called by the Arduino runtime on bootup
 void setup()
@@ -323,6 +377,14 @@ void setup()
   controllerIsBooting = false;
 }
 
+ /*******************************************************************************
+ *
+ *
+ *                           BUTTON  ROUTINES
+ *
+ *
+ *******************************************************************************/
+
 // Letting a button auto-repeat without redrawing the LCD in between leads to a
 // poor user interface
 bool lcdRedrawNeeded;
@@ -410,6 +472,35 @@ static void checkButtons()
   }
 }
 
+ /*******************************************************************************
+ *
+ *
+ *                                MAIN   LOOP
+ *
+ *
+ *******************************************************************************/
+
+// This is the Arduino main loop.
+//
+// There are two goals this loop must balance: the highest priority is
+// that the PID loop be executed reliably and on-time; the other goal is that
+// the screen, buttons, and serial interfaces all be responsive. However,
+// since things like redrawing the LCD may take tens of milliseconds -- and responding
+// to serial commands can take 100s of milliseconds at low bit rates -- a certain
+// measure of cleverness is required.
+//
+// Alongside the real-time task of the PID loop, there are 6 other tasks which may
+// need to be performed:
+// 1. handling a button press
+// 2. executing a step of the auto-tuner
+// 3. executing a step of a profile
+// 4. redrawing the LCD
+// 5. saving settings to EEPROM
+// 6. processing a serial-port command
+//
+// Characters from the serial port are received asynchronously: it is only the
+// command _processing_ which needs to be scheduled.
+
 static void completeAutoTune()
 {
   // We're done, set the tuning parameters
@@ -454,7 +545,7 @@ unsigned long settingsWritebackTime;
 
 // record that the settings have changed, and need to be written to EEPROM
 // as soon as they are done changing
-static void markSettingsDirty()
+void markSettingsDirty()
 {
   settingsWritebackNeeded = true;
 
@@ -463,27 +554,6 @@ static void markSettingsDirty()
   settingsWritebackTime = now + 5000;
 }
 
-// This is the Arduino main loop.
-//
-// There are two goals this loop must balance: the highest priority is
-// that the PID loop be executed reliably and on-time; the other goal is that
-// the screen, buttons, and serial interfaces all be responsive. However,
-// since things like redrawing the LCD may take tens of milliseconds -- and responding
-// to serial commands can take 100s of milliseconds at low bit rates -- a certain
-// measure of cleverness is required.
-//
-// Alongside the real-time task of the PID loop, there are 6 other tasks which may
-// need to be performed:
-// 1. handling a button press
-// 2. executing a step of the auto-tuner
-// 3. executing a step of a profile
-// 4. redrawing the LCD
-// 5. saving settings to EEPROM
-// 6. processing a serial-port command
-//
-// Characters from the serial port are received asynchronously: it is only the
-// command _processing_ which needs to be scheduled.
-
 // whether loop() is permitted to do LCD, EEPROM, or serial I/O: this is set
 // to false when loop() is being re-entered during some slow operation
 bool blockSlowOperations;
@@ -491,7 +561,9 @@ bool blockSlowOperations;
 void realtimeLoop()
 {
   if (controllerIsBooting)
+  {
     return;
+  }
 
   blockSlowOperations = true;
   loop();
@@ -549,7 +621,7 @@ void loop()
       profileLoopIteration();
       
       // update displayed set point
-      displaySetpoint = makeDecimal<1>(activeSetPoint);
+      updateActiveSetPoint();
     }
 
     // update the PID
@@ -558,7 +630,9 @@ void loop()
   // update the displayed output
   // unless in manual mode, in which case a new value may have been entered
   if (tuning || (modeIndex != PID::MANUAL))
+  {
     manualOutput = makeDecimal<1>(output);
+  }
 
   // after the PID has updated, check the trip limits
   if (tripLimitsEnabled)
@@ -568,28 +642,39 @@ void loop()
       tripped = false; 
     }
 
-    if ((displayInput != (ospDecimalValue<1>){-19999}) && ((displayInput < lowerTripLimit) || (upperTripLimit < displayInput ) || tripped))
+    if (
+      (displayInput != (ospDecimalValue<1>){-19999}) && 
+      ((displayInput < lowerTripLimit) || (upperTripLimit < displayInput ) || tripped)
+    )
     {
       output = 0.0;
       manualOutput = (ospDecimalValue<1>){0};
       tripped = true;
+      
 #if !defined SILENCE_BUZZER  
       if (buzz >= BUZZ_OFF)
+      {
         buzzUntilCancel; // could get pretty annoying
+      }
 #endif      
+
     }
 
 #if !defined SILENCE_BUZZER      
     if (!tripped)
+    {
       buzzOff;
+    }
 #endif      
   }   
   else
   {
-    tripped= false;
+    tripped = false;
+    
 #if !defined SILENCE_BUZZER 
     buzzOff;
 #endif    
+
   }  
 
   // after the realtime part comes the slow operations, which may re-enter
@@ -658,13 +743,14 @@ void loop()
       serialCommandBuffer[serialCommandLength - 1] = '\n';
       drawNotificationCursor('*');
 
-/*
-Serial.print(F("Arduino hears:"));
-Serial.write('"');
-Serial.print(serialCommandBuffer);
-Serial.write('"');
-Serial.println();
-*/
+      /*
+      // debug
+      Serial.print(F("Arduino hears:"));
+      Serial.write('"');
+      Serial.print(serialCommandBuffer);
+      Serial.write('"');
+      Serial.println();
+      */
 
       processSerialCommand();
       
@@ -672,6 +758,7 @@ Serial.println();
     }
   }
 #endif
+
 }
 
 

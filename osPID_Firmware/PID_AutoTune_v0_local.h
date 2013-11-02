@@ -1,6 +1,6 @@
 #if !defined PID_AutoTune_v0
 #define PID_AutoTune_v0
-#define LIBRARY_VERSION 0.0.1
+#define AUTO_TUNE_LIBRARY_VERSION 0.0.1
 
 #if ARDUINO >= 100
 #include "Arduino.h"
@@ -19,7 +19,7 @@
 
 // AMIGOf tuning rule
 // we have made space for this, yay!
-#define AUTOTUNE_AMIGOF_PI
+#undef AUTOTUNE_AMIGOF_PI
 
 // defining this option implements relay bias
 // this is useful to adjust the relay output values

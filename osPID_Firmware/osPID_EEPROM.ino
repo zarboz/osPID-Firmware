@@ -12,6 +12,9 @@
 #undef BUGCHECK
 #define BUGCHECK() ospBugCheck(PSTR("EEPR"), __LINE__);
 
+// prototype definitions
+extern void drawBadCsum(byte);
+
 /*******************************************************************************
 * The controller stores all of its settings in the on-chip EEPROM, which is rated
 * for 100K erase/program cycles. Settings are saved in several distinct blocks,
@@ -129,76 +132,6 @@ enum
 // the index of the currently in-use (or next free) status buffer block
 byte statusBufferIndex = 0;
 
-// check each EEPROM block and either restore it or mark it to be reset
-static void setupEEPROM()
-{
-  // first check the profiles
-  for (byte i = 0; i < NR_PROFILES; i++) 
-  {
-    if (!checkEEPROMProfile(i)) 
-    {
-      // bad CRC: clear this profile by writing it using our hardcoded
-      // "empty profile" defaults
-      drawBadCsum(i);
-      //profileBuffer.name[6] = '1' + i;
-      saveEEPROMProfile(i);
-    }
-  }
-
-  // then check and restore the global settings
-  if (checkEEPROMSettings()) 
-  {
-    restoreEEPROMSettings();
-  } 
-  else 
-  {
-    // bad CRC: save our hardcoded defaults
-    drawBadCsum(0xFF);
-    saveEEPROMSettings();
-  }
-}
-
-// force a reset to factory defaults
-static void clearEEPROM() 
-{
-  // overwrite the CRC-16s
-  unsigned int zero = 0;
-  ospSettingsHelper::eepromWrite(SETTINGS_CRC_OFFSET, zero);
-  for (byte i = 0; i < NR_PROFILES; i++) 
-  {
-    ospSettingsHelper::eepromWrite(PROFILE_BLOCK_START_OFFSET + i*PROFILE_BLOCK_LENGTH + PROFILE_CRC_OFFSET, zero);
-  }
-  // since the status buffer blocks are tagged by CRC-16 values, we don't need to do
-  // anything with them
-}
-
-static unsigned int checkEEPROMBlockCrc(int address, int length)
-{
-  unsigned int crc = CRC16_INIT;
-  while (length--) 
-  {
-    byte b = eeprom_read_byte((byte *)address);
-    crc = _crc16_update(crc, b);
-    address++;
-  }
-  return crc;
-}
-
-// check the CRC-16 of the settings block
-static bool checkEEPROMSettings()
-{
-  unsigned int storedCrc, calculatedCrc;
-  calculatedCrc = checkEEPROMBlockCrc(SETTINGS_SBYTE1_OFFSET, SETTINGS_CRC_LENGTH);
-  ospSettingsHelper::eepromRead(SETTINGS_CRC_OFFSET, storedCrc);
-  if (calculatedCrc != storedCrc)
-  {
-    return false;
-  }
-  byte storedVersion;
-  ospSettingsHelper::eepromRead(SETTINGS_VERSION_OFFSET, storedVersion);
-  return (storedVersion == EEPROM_STORAGE_VERSION);
-}
-
 union SettingsByte1 
 {
   struct 
@@ -225,7 +158,7 @@ union SettingsByte2
   byte byteVal;
 };
 
-static void saveEEPROMSettings()
+void saveEEPROMSettings()
 {
   SettingsByte1 sb1;
   SettingsByte2 sb2;
@@ -321,7 +254,6 @@ static void restoreEEPROMSettings()
     settings.restore(setPoints[i]);
   }
   updateActiveSetPoint();
-  displaySetpoint = setPoints[0];
 
   settings.restore(aTuneMethod);
   settings.restore(aTuneStep);
@@ -348,6 +280,33 @@ static void restoreEEPROMSettings()
   displayWindow = theOutputDevice.getOutputWindowSeconds();
 #endif
 
+}
+
+static unsigned int checkEEPROMBlockCrc(int address, int length)
+{
+  unsigned int crc = CRC16_INIT;
+  while (length--) 
+  {
+    byte b = eeprom_read_byte((byte *)address);
+    crc = _crc16_update(crc, b);
+    address++;
+  }
+  return crc;
+}
+
+// check the CRC-16 of the settings block
+bool checkEEPROMSettings()
+{
+  unsigned int storedCrc, calculatedCrc;
+  calculatedCrc = checkEEPROMBlockCrc(SETTINGS_SBYTE1_OFFSET, SETTINGS_CRC_LENGTH);
+  ospSettingsHelper::eepromRead(SETTINGS_CRC_OFFSET, storedCrc);
+  if (calculatedCrc != storedCrc)
+  {
+    return false;
+  }
+  byte storedVersion;
+  ospSettingsHelper::eepromRead(SETTINGS_VERSION_OFFSET, storedVersion);
+  return (storedVersion == EEPROM_STORAGE_VERSION);
 }
 
 // check the CRC-16 of the i'th profile block
@@ -404,6 +363,50 @@ retry:
 
   // and now write the CRC-16
   ospSettingsHelper::eepromWrite(base, crcValue);
+}
+
+// check each EEPROM block and either restore it or mark it to be reset
+void setupEEPROM()
+{
+  // first check the profiles
+  for (byte i = 0; i < NR_PROFILES; i++) 
+  {
+    if (!checkEEPROMProfile(i)) 
+    {
+      // bad CRC: clear this profile by writing it using our hardcoded
+      // "empty profile" defaults
+      drawBadCsum(i);
+      //profileBuffer.name[6] = '1' + i;
+      saveEEPROMProfile(i);
+    }
+  }
+
+  // then check and restore the global settings
+  if (checkEEPROMSettings()) 
+  {
+    restoreEEPROMSettings();
+  } 
+  else 
+  {
+    // bad CRC: save our hardcoded defaults
+    drawBadCsum(0xFF);
+    saveEEPROMSettings();
+  }
+}
+
+// force a reset to factory defaults
+static void clearEEPROM() 
+{
+  // overwrite the CRC-16s
+  unsigned int zero = 0;
+  ospSettingsHelper::eepromWrite(SETTINGS_CRC_OFFSET, zero);
+  for (byte i = 0; i < NR_PROFILES; i++) 
+  {
+    ospSettingsHelper::eepromWrite(PROFILE_BLOCK_START_OFFSET + i*PROFILE_BLOCK_LENGTH + PROFILE_CRC_OFFSET, zero);
+  }
+  // since the status buffer blocks are tagged by CRC-16 values, we don't need to do
+  // anything with them
+  
 }
 
 static char getProfileNameCharAt(byte profileIndex, byte i)
@@ -473,7 +476,7 @@ static byte profileIndexForCrc(unsigned int crc)
 // was interrupted; if it was, it loads activeProfile and currentProfileStep
 // with the step that was interrupted and returns true. If any profile has been
 // run, activeProfile is restored to the last profile to have been run.
-static bool profileWasInterrupted()
+bool profileWasInterrupted()
 {
   unsigned int statusBits, crc;
 
@@ -516,7 +519,7 @@ static bool profileWasInterrupted()
   return false;
 }
 
-static void recordProfileStart()
+void recordProfileStart()
 {
   // figure out which status buffer slot to use, and which one was last used
   byte priorBlockIndex = currentStatusBufferBlockIndex;
@@ -538,7 +541,7 @@ static void recordProfileStart()
 }
 
 // clear the Incomplete bit for the just-completed profile step
-static void recordProfileStepCompletion(byte step)
+void recordProfileStepCompletion(byte step)
 {
   int statusAddress = STATUS_BUFFER_START_OFFSET
         + currentStatusBufferBlockIndex * STATUS_BUFFER_BLOCK_LENGTH
@@ -551,7 +554,7 @@ static void recordProfileStepCompletion(byte step)
 
 // mark the profile as complete by clearing all the Incomplete bits, regardless
 // of how many steps it actually contained
-static void recordProfileCompletion()
+void recordProfileCompletion()
 {
   recordProfileStepCompletion(15);
 }

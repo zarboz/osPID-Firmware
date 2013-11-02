@@ -8,7 +8,11 @@
 #undef BUGCHECK
 #define BUGCHECK() ospBugCheck(PSTR("PROF"), __LINE__);
 
+// prototype definitions
 extern Tuning tuningRule[PID_ATune::NO_OVERSHOOT_PID + 1];
+extern void recordProfileStepCompletion(byte);
+extern void stopProfile();
+extern void recordProfileStart();
 
 // a program invariant has been violated: suspend the controller and
 // just flash a debugging message until the unit is power cycled
@@ -56,8 +60,13 @@ static void startAutoTune()
     s = aTuneStep;
   }
   aTune.SetOutputStep(s);
-  
-  if (aTuneMethod == PID_ATune::AMIGOF_PI || tuningRule[aTuneMethod].PI_controller())
+
+#if defined AUTOTUNE_AMIGOF_PI
+if (aTuneMethod == PID_ATune::AMIGOF_PI || tuningRule[aTuneMethod].PI_controller())
+#else
+if (tuningRule[aTuneMethod].PI_controller())
+#endif
+
   {
     myPID.SetTunings(makeDecimal<3>(aTune.GetKp()), makeDecimal<3>(aTune.GetKi()), (ospDecimalValue<3>){0});
   }
@@ -69,7 +78,7 @@ static void startAutoTune()
   tuning = true;
 }
 
-static void stopAutoTune()
+void stopAutoTune()
 {
   aTune.Cancel();
   tuning = false;
@@ -97,7 +106,7 @@ ProfileState profileState;
 
 static void getProfileStepData(byte profileIndex, byte i, byte *type, unsigned long *duration, ospDecimalValue<1> *endpoint);
 
-static bool startCurrentProfileStep()
+bool startCurrentProfileStep()
 {
   byte stepType;
   getProfileStepData(activeProfileIndex, currentProfileStep,
@@ -147,10 +156,11 @@ static bool startCurrentProfileStep()
 
 // this function gets called every iteration of loop() while a profile is
 // running
-static void profileLoopIteration()
+void profileLoopIteration()
 {
   double delta;
   double target = double(profileState.targetSetpoint);
+  
 #if !defined ATMEGA_32kB_FLASH
   ospAssert(!tuning);
   ospAssert(runningProfile);
@@ -205,6 +215,7 @@ static void profileLoopIteration()
 
 static void startProfile()
 {
+  
 #if !defined ATMEGA_32kB_FLASH
   ospAssert(!runningProfile);
 #endif  
@@ -219,14 +230,17 @@ static void startProfile()
   }
 }
 
-static void stopProfile()
+void stopProfile()
 {
+  
 #if !defined ATMEGA_32kB_FLASH
   ospAssert(runningProfile);
 #endif
+
 #if !defined SILENCE_BUZZER
   buzzOff;
 #endif
+
   recordProfileCompletion();
   runningProfile = false;
 }

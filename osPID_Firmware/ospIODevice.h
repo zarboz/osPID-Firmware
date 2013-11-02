@@ -15,7 +15,7 @@ public:
   // device types
   enum 
   {
-    INPUT_THERMISTOR,
+    INPUT_THERMISTOR = 0,
     INPUT_ONEWIRE,
     INPUT_THERMOCOUPLE,
     OUTPUT_SSR,
@@ -59,6 +59,8 @@ public:
   }
 
   double readInput() { return NAN; };
+  void setCalibration(ospDecimalValue<1> newCalibration) {};
+  ospDecimalValue<1> getCalibration() { return (ospDecimalValue<1>){-19999}; };
 };
 
 class ospBaseOutputDevice : public ospBaseIODevice 
@@ -70,6 +72,9 @@ public:
   }
  
   void setOutputPercent(double percentage) {};
+  void setOutputWindowSeconds(ospDecimalValue<1> newOutputWindowSeconds) {};
+  ospDecimalValue<1> getOutputWindowSeconds() { return (ospDecimalValue<1>){-19999}; };
+  
 };
 
 #endif

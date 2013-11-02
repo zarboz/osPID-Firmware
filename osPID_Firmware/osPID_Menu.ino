@@ -9,7 +9,6 @@
 #undef BUGCHECK
 #define BUGCHECK() ospBugCheck(PSTR("MENU"), __LINE__);
 
-
 enum { 
   firstDigitPosition = 6, 
   lastDigitPosition  = firstDigitPosition + 4 
@@ -110,15 +109,22 @@ enum
 
 PROGMEM const byte mainMenuItems[4] = { ITEM_DASHBOARD_MENU, ITEM_PROFILE_MENU, ITEM_CONFIG_MENU, ITEM_AUTOTUNE_CMD };
 PROGMEM const byte dashMenuItems[5] = { ITEM_SETPOINT, ITEM_INPUT, ITEM_OUTPUT, ITEM_PID_MODE, ITEM_TRIP_MENU };
-PROGMEM const byte configMenuItems[9] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, 
+
+#if !defined USE_SIMULATOR
+PROGMEM const byte configMenuItems[9] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_INPUT_MENU, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, 
   ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU };
+#else
+PROGMEM const byte configMenuItems[9] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_INPUT_MENU, 
+  ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU };
+#endif 
+  
 PROGMEM const byte profileMenuItems[3] = { ITEM_PROFILE1, ITEM_PROFILE2, ITEM_PROFILE3 };
 PROGMEM const byte setpointMenuItems[4] = { ITEM_SETPOINT1, ITEM_SETPOINT2, ITEM_SETPOINT3, ITEM_SETPOINT4 };
 
 #if !defined USE_SIMULATOR
 PROGMEM const byte inputMenuItems[3] = { ITEM_INPUT_THERMISTOR, ITEM_INPUT_ONEWIRE, ITEM_INPUT_THERMOCOUPLE };
 #else
-PROGMEM const byte inputMenuItems[1] = { ITEM_SIMULATOR };
+PROGMEM const byte inputMenuItems[1] = { ITEM_INPUT_SIMULATOR };
 #endif
 
 PROGMEM const byte poweronMenuItems[3] = { ITEM_POWERON_DISABLE, ITEM_POWERON_CONTINUE, ITEM_POWERON_RESUME_PROFILE };
@@ -248,16 +254,16 @@ struct DecimalItem
 // This must be in the same order as the ITEM_* enumeration
 PROGMEM DecimalItem decimalItemData[DECIMAL_ITEM_COUNT] =
 {
-  { 'S', 'v', ' ', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &displaySetpoint },
-  { 'P', 'v', ' ', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::NO_EDIT, &displayInput },
-  { 'O', 'u', 't', DecimalItem::RANGE_0_1000      | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::EDIT_MANUAL_ONLY, &manualOutput },
-  { 'P', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &PGain },
-  { 'I', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &IGain },
-  { 'D', ' ', ' ', DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &DGain },
-  { 'C', 'a', 'l', DecimalItem::RANGE_M999_P999   | DecimalItem::ONE_DECIMAL_PLACE, &displayCalibration },
-  { 'C', 'y', 'c', DecimalItem::RANGE_10_32767    | DecimalItem::ONE_DECIMAL_PLACE, &displayWindow },
-  { 'M', 'i', 'n', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &lowerTripLimit },
-  { 'M', 'a', 'x', DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &upperTripLimit }
+  { { 'S', 'v', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &displaySetpoint },
+  { { 'P', 'v', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::NO_EDIT, &displayInput },
+  { { 'O', 'u', 't' }, DecimalItem::RANGE_0_1000      | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::EDIT_MANUAL_ONLY, &manualOutput },
+  { { 'P', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &PGain },
+  { { 'I', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &IGain },
+  { { 'D', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &DGain },
+  { { 'C', 'a', 'l' }, DecimalItem::RANGE_M999_P999   | DecimalItem::ONE_DECIMAL_PLACE, &displayCalibration },
+  { { 'C', 'y', 'c' }, DecimalItem::RANGE_10_32767    | DecimalItem::ONE_DECIMAL_PLACE, &displayWindow },
+  { { 'M', 'i', 'n' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &lowerTripLimit },
+  { { 'M', 'a', 'x' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &upperTripLimit }
 };
 
 struct MenuStateData 
@@ -272,6 +278,16 @@ struct MenuStateData
 
 struct MenuStateData menuState;
 
+int pow10(byte n)
+{
+  int result = 1;
+
+  while (n--)
+    result *= 10;
+
+  return result;
+}
+
 // print n blanks to LCD
 void __attribute__ ((noinline)) LCDspc(byte n)
 {
@@ -280,7 +296,7 @@ void __attribute__ ((noinline)) LCDspc(byte n)
 }
 
 // print text from PROGMEM to LCD and fill in with blanks to the end of the line 
-void __attribute__ ((noinline)) LCDprintln(const PROGMEM char* s)
+void __attribute__ ((noinline)) LCDprintln(const char* s)
 {
   char c;
   byte i = 16;
@@ -303,7 +319,7 @@ static void __attribute__ ((noinline)) LCDsetCursorBottomLeft()
 }
 
 // draw the initial startup banner
-static void drawStartupBanner()
+void drawStartupBanner()
 {
   // display a startup message
   theLCD.clear();
@@ -318,28 +334,18 @@ static void drawStartupBanner()
 
 }
 
-// draw a banner reporting a bad EEPROM checksum
-static void drawBadCsum(byte profile)
+// draw a profile name at the current position
+static void drawProfileName(byte profileIndex)
 {
-  delay(500);
-  LCDsetCursorTopLeft();
-  if (profile == 0xFF)
+  for (byte i = 0; i < 15; i++)
   {
-    LCDprintln(PSTR("Settings"));
+    char ch = getProfileNameCharAt(profileIndex, i);
+    theLCD.print(ch ? ch : ' ');
   }
-  else
-  {
-    LCDprintln(Pprofile);
-    theLCD.setCursor(8, 0);
-    theLCD.print(char(profile + '1'));
-  }
-  LCDsetCursorBottomLeft();
-  LCDprintln(PSTR("Cleared"));
-  delay(2000);
 }
 
 // draw a banner reporting that we're resuming an interrupted profile
-static void drawResumeProfileBanner()
+void drawResumeProfileBanner()
 {
   LCDsetCursorTopLeft();
   LCDprintln(PSTR("Resuming"));
@@ -348,42 +354,108 @@ static void drawResumeProfileBanner()
   delay(1000);
 }
 
-static void drawMenu()
+// can a given item be edited
+static bool __attribute__ ((noinline)) canEditDecimalItem(const byte index)
 {
-  byte itemCount = menuData[menuState.currentMenu].itemCount();
+  byte flags = decimalItemData[index].flags();
 
-  if (menuData[menuState.currentMenu].is2x2())
+  return !(flags & DecimalItem::NO_EDIT) &&
+    !((flags & DecimalItem::EDIT_MANUAL_ONLY) && (modeIndex == 1));
+}
+
+static bool __attribute__ ((noinline)) canEditItem(byte item)
+{
+  bool canEdit = !tuning;
+
+  if (item < FIRST_DECIMAL_ITEM)
   {
-    // NOTE: right now the code only supports one screen (<= 4 items) in
-    // 2x2 menu mode
-    
-#if !defined ATMEGA_32kB_FLASH
-    ospAssert(itemCount <= 4);
-#endif
+    canEdit = true; // menus always get a '>' selector
+  }
+  else if (item < FIRST_ACTION_ITEM)
+  {
+    canEdit = canEdit && canEditDecimalItem(item - FIRST_DECIMAL_ITEM);
+  }
+  return canEdit;
+}
 
-    for (byte i = 0; i < itemCount; i++) 
-    {
-      bool highlight = (i == menuState.highlightedItemMenuIndex);
-      byte item = menuData[menuState.currentMenu].itemAt(i);
-
-      drawHalfRowItem(i / 2, 5 * (i & 1), highlight, item);
-    }
+static void __attribute__ ((noinline)) startEditing(byte item)
+{
+  menuState.editing = true;
+  if (item < FIRST_ACTION_ITEM)
+  {
+    menuState.editDepth = firstDigitPosition;
   }
   else
   {
-    // 2x1 format; supports an arbitrary number of items in the menu
-    bool highlightFirst = (menuState.highlightedItemMenuIndex == menuState.firstItemMenuIndex);
-    
-#if !defined ATMEGA_32kB_FLASH
-    ospAssert(menuState.firstItemMenuIndex + 1 < itemCount);
-#endif
-
-    drawFullRowItem(0, highlightFirst, menuData[menuState.currentMenu].itemAt(menuState.firstItemMenuIndex));
-    drawFullRowItem(1, !highlightFirst, menuData[menuState.currentMenu].itemAt(menuState.firstItemMenuIndex+1));
+    menuState.editDepth = 1;
   }
 
-  // certain ongoing states flash a notification in the cursor slot
-  drawStatusFlash();
+  menuState.editStartMillis = millis();
+
+  if (canEditItem(item))
+  {
+    theLCD.cursor();
+  }
+}
+
+static void __attribute__ ((noinline)) stopEditing()
+{
+  menuState.editing = false;
+  theLCD.noCursor();
+}
+
+// draw the selector character at the current position
+static void __attribute__ ((noinline)) drawSelector(byte item, bool selected)
+{
+  if (!selected)
+  {
+    theLCD.print(' ');
+    return;
+  }
+
+  bool canEdit = canEditItem(item);
+
+  if (menuState.editing && !canEdit && (millis() > menuState.editStartMillis + 1000))
+  {
+    // cancel the disallowed edit
+    stopEditing();
+  }
+
+  if (menuState.editing)
+  {
+    theLCD.print(canEdit ? char(126) : 'X'); // char(126) = arrow pointing right
+  }
+  else
+  {
+    theLCD.print(canEdit ? '>' : '|');
+  }
+}
+
+// draw an item which takes up half a row (4 characters),
+// for 2x2 menu mode
+static void drawHalfRowItem(byte row, byte col, bool selected, byte item)
+{ 
+  switch (item)
+  {
+  case ITEM_SETPOINT1:
+  case ITEM_SETPOINT2:
+  case ITEM_SETPOINT3:
+  case ITEM_SETPOINT4: 
+    theLCD.setCursor(col, row);
+    drawSelector(item, selected);
+    theLCD.print(F("Sv")); 
+    theLCD.print(char('1' + item - ITEM_SETPOINT1));
+    LCDspc(col == 0 ? 1 : 7);
+    break;
+  default:
+  
+#if !defined ATMEGA_32kB_FLASH
+    BUGCHECK();
+#else    
+    ;
+#endif  
+
+  }
 }
 
 // This function converts a decimal fixed-point integer to a string,
@@ -435,7 +507,7 @@ static void drawDecimalValue(byte item)
   int num = decimalItemData[itemIndex].currentValue();
   const byte decimals = decimalItemData[itemIndex].decimalPlaces();
 
-  PROGMEM const char *s = decimalItemData[itemIndex].pmemIcon;
+  const char *s = decimalItemData[itemIndex].pmemIcon;
   for (byte i = 0; i < 3; i++ )
   {
     buffer[i] = (char) pgm_read_byte_near(s++);
@@ -468,77 +540,9 @@ static void drawDecimalValue(byte item)
   }
 }
 
-// can a given item be edited
-static bool __attribute__ ((noinline)) canEditDecimalItem(const byte index)
-{
-  byte flags = decimalItemData[index].flags();
-
-  return !(flags & DecimalItem::NO_EDIT) &&
-    !((flags & DecimalItem::EDIT_MANUAL_ONLY) && (modeIndex == 1));
-}
-
-static bool __attribute__ ((noinline)) canEditItem(byte item)
-{
-  bool canEdit = !tuning;
-
-  if (item < FIRST_DECIMAL_ITEM)
-  {
-    canEdit = true; // menus always get a '>' selector
-  }
-  else if (item < FIRST_ACTION_ITEM)
-  {
-    canEdit = canEdit && canEditDecimalItem(item - FIRST_DECIMAL_ITEM);
-  }
-  return canEdit;
-}
-
-static void __attribute__ ((noinline)) stopEditing()
-{
-  menuState.editing = false;
-  theLCD.noCursor();
-}
-
-// draw the selector character at the current position
-static void __attribute__ ((noinline)) drawSelector(byte item, bool selected)
-{
-  if (!selected)
-  {
-    theLCD.print(' ');
-    return;
-  }
-
-  bool canEdit = canEditItem(item);
-
-  if (menuState.editing && !canEdit && (millis() > menuState.editStartMillis + 1000))
-  {
-    // cancel the disallowed edit
-    stopEditing();
-  }
-
-  if (menuState.editing)
-  {
-    theLCD.print(canEdit ? char(126) : 'X'); // char(126) = arrow pointing right
-  }
-  else
-  {
-    theLCD.print(canEdit ? '>' : '|');
-  }
-}
-
-// draw a profile name at the current position
-static void drawProfileName(byte profileIndex)
-{
-  for (byte i = 0; i < 15; i++)
-  {
-    char ch = getProfileNameCharAt(profileIndex, i);
-    theLCD.print(ch ? ch : ' ');
-  }
-}
-
 // draw an item occupying a full 8x1 display line
 static void drawFullRowItem(byte row, bool selected, byte item)
 {
-  unsigned int kbps;
   theLCD.setCursor(0, row);
 
   // first draw the selector
@@ -711,7 +715,6 @@ static void drawFullRowItem(byte row, bool selected, byte item)
   }
 }
 
-
 // flash a status indicator if appropriate
 static void drawStatusFlash()
 {
@@ -748,31 +751,42 @@ static void drawStatusFlash()
   drawNotificationCursor(ch);
 }
 
-// draw an item which takes up half a row (4 characters),
-// for 2x2 menu mode
-static void drawHalfRowItem(byte row, byte col, bool selected, byte item)
-{ 
-  switch (item)
-  {
-  case ITEM_SETPOINT1:
-  case ITEM_SETPOINT2:
-  case ITEM_SETPOINT3:
-  case ITEM_SETPOINT4: 
-    theLCD.setCursor(col, row);
-    drawSelector(item, selected);
-    theLCD.print(F("Sv")); 
-    theLCD.print(char('1' + item - ITEM_SETPOINT1));
-    LCDspc(col == 0 ? 1 : 7);
-    break;
-  default:
-  
-#if !defined ATMEGA_32kB_FLASH
-    BUGCHECK();
-#else    
-    ;
-#endif  
+void drawMenu()
+{
+  byte itemCount = menuData[menuState.currentMenu].itemCount();
 
+  if (menuData[menuState.currentMenu].is2x2())
+  {
+    // NOTE: right now the code only supports one screen (<= 4 items) in
+    // 2x2 menu mode
+    
+#if !defined ATMEGA_32kB_FLASH
+    ospAssert(itemCount <= 4);
+#endif
+
+    for (byte i = 0; i < itemCount; i++) 
+    {
+      bool highlight = (i == menuState.highlightedItemMenuIndex);
+      byte item = menuData[menuState.currentMenu].itemAt(i);
+
+      drawHalfRowItem(i / 2, 5 * (i & 1), highlight, item);
+    }
   }
+  else
+  {
+    // 2x1 format; supports an arbitrary number of items in the menu
+    bool highlightFirst = (menuState.highlightedItemMenuIndex == menuState.firstItemMenuIndex);
+    
+#if !defined ATMEGA_32kB_FLASH
+    ospAssert(menuState.firstItemMenuIndex + 1 < itemCount);
+#endif
+
+    drawFullRowItem(0, highlightFirst, menuData[menuState.currentMenu].itemAt(menuState.firstItemMenuIndex));
+    drawFullRowItem(1, !highlightFirst, menuData[menuState.currentMenu].itemAt(menuState.firstItemMenuIndex+1));
+  }
+
+  // certain ongoing states flash a notification in the cursor slot
+  drawStatusFlash();
 }
 
 // draw a character at the current location of the selection indicator
@@ -815,27 +829,7 @@ void __attribute__ ((noinline)) drawNotificationCursor(char icon)
   }
 }
 
-static void __attribute__ ((noinline)) startEditing(byte item)
-{
-  menuState.editing = true;
-  if (item < FIRST_ACTION_ITEM)
-  {
-    menuState.editDepth = firstDigitPosition;
-  }
-  else
-  {
-    menuState.editDepth = 1;
-  }
-
-  menuState.editStartMillis = millis();
-
-  if (canEditItem(item))
-  {
-    theLCD.cursor();
-  }
-}
-
-static void backKeyPress()
+void backKeyPress()
 {
   if (menuState.editing)
   {
@@ -883,11 +877,22 @@ static void backKeyPress()
     menuState.firstItemMenuIndex = 3;
     break;
   case ITEM_INPUT_MENU:
+  
+#if !defined USE_SIMULATOR
+    // skip over calibration and output cycle items
     prevMenu -= 2;
+#endif 
+
   case ITEM_POWERON_MENU:
   case ITEM_RESET_ROM_MENU:
     menuState.currentMenu = ITEM_CONFIG_MENU;
+    
+#if !defined USE_SIMULATOR
     menuState.highlightedItemMenuIndex = prevMenu - ITEM_INPUT_MENU + 6;
+#else    
+    menuState.highlightedItemMenuIndex = prevMenu - ITEM_INPUT_MENU + 4;
+#endif
+
     menuState.firstItemMenuIndex = menuState.highlightedItemMenuIndex - 1;
     break;
   default:
@@ -901,7 +906,7 @@ static void backKeyPress()
   }
 }
 
-static void updownKeyPress(bool up)
+void updownKeyPress(bool up)
 {
   if (!menuState.editing)
   {
@@ -1016,7 +1021,6 @@ static void updownKeyPress(bool up)
   // capture changes
   if (item == ITEM_SETPOINT)
   {
-    setPoints[setPointIndex] = displaySetpoint;
     updateActiveSetPoint();
   }
   
@@ -1038,7 +1042,7 @@ static void updownKeyPress(bool up)
   }
 }
 
-static void okKeyPress()
+void okKeyPress()
 {
   byte item = menuData[menuState.currentMenu].itemAt(menuState.highlightedItemMenuIndex);
 
@@ -1163,7 +1167,6 @@ static void okKeyPress()
   case ITEM_SETPOINT3:
   case ITEM_SETPOINT4:
     setPointIndex = item - ITEM_SETPOINT1;
-    displaySetpoint = setPoints[setPointIndex];
     updateActiveSetPoint();
     markSettingsDirty();
 
@@ -1186,7 +1189,7 @@ static void okKeyPress()
     theInputDevice.ioType = (item - ITEM_INPUT_THERMISTOR);
 #else  
   case ITEM_INPUT_SIMULATOR:
-    theInputDevice.ioType = INPUT_SIMULATOR;
+    theInputDevice.ioType = theInputDevice.INPUT_SIMULATOR;
 #endif  
 
     theInputDevice.initialize();
@@ -1231,7 +1234,7 @@ static void okKeyPress()
 
 // returns true if there was a long-press action; false if a long press
 // is the same as a short press
-static bool okKeyLongPress()
+bool okKeyLongPress()
 {
   byte item = menuData[menuState.currentMenu].itemAt(menuState.highlightedItemMenuIndex);
 
@@ -1260,4 +1263,24 @@ static bool okKeyLongPress()
     return false;
 
   return true;
+}
+
+// draw a banner reporting a bad EEPROM checksum
+void drawBadCsum(byte profile)
+{
+  delay(500);
+  LCDsetCursorTopLeft();
+  if (profile == 0xFF)
+  {
+    LCDprintln(PSTR("Settings"));
+  }
+  else
+  {
+    LCDprintln(Pprofile);
+    theLCD.setCursor(8, 0);
+    theLCD.print(char(profile + '1'));
+  }
+  LCDsetCursorBottomLeft();
+  LCDprintln(PSTR("Cleared"));
+  delay(2000);
 }

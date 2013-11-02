@@ -166,7 +166,7 @@ bool PID_ATune::Runtime()
         double asymmetry = (avgStep1 > avgStep2) ?
                            (avgStep1 - avgStep2) / avgStep1 : (avgStep2 - avgStep1) / avgStep2;
                            
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
         Serial.print(F("asymmetry "));
         Serial.println(asymmetry);
 #endif
@@ -190,7 +190,7 @@ bool PID_ATune::Runtime()
             // change is large enough to bother with
             relayBias += deltaRelayBias;
           
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
             Serial.print(F("deltaRelayBias "));
             Serial.println(deltaRelayBias);
             Serial.print(F("relayBias "));
@@ -353,7 +353,7 @@ bool PID_ATune::Runtime()
       // calculate process gain
       K_process = (avgInput - lastPeaks[0]) / oStep;
 
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
       Serial.print(F("Process gain "));
       Serial.println(K_process);
 #endif
@@ -405,7 +405,7 @@ bool PID_ATune::Runtime()
   {
     peakCount++;
 
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
     Serial.println(F("peakCount "));
     Serial.println(peakCount);
     Serial.println(F("peaks"));
@@ -481,7 +481,7 @@ bool PID_ATune::Runtime()
     }
     inducedAmplitude /= 6.0;
 
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
     Serial.print(F("amplitude "));
     Serial.println(inducedAmplitude);
     Serial.print(F("absMin "));
@@ -503,7 +503,7 @@ bool PID_ATune::Runtime()
     {
       phaseLag = CalculatePhaseLag(inducedAmplitude);
 
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
       Serial.print(F("phase lag "));
       Serial.println(phaseLag / CONST_PI * 180.0);
 #endif
@@ -530,7 +530,7 @@ bool PID_ATune::Runtime()
         */
 #endif        
 
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
         Serial.print(F("newNoiseBand "));
         Serial.println(newNoiseBand);   
 #endif
@@ -579,7 +579,7 @@ bool PID_ATune::Runtime()
   {
     // do not calculate gain parameters
     
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
     Serial.println("failed");
 #endif
 
@@ -591,7 +591,7 @@ bool PID_ATune::Runtime()
   // calculate ultimate gain
   double Ku = 4.0 * oStep / (inducedAmplitude * CONST_PI); 
 
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
   Serial.print(F("ultimate gain "));
   Serial.println(1.0 / Ku);
 #endif
@@ -599,7 +599,7 @@ bool PID_ATune::Runtime()
   // calculate ultimate period in seconds
   double Pu = (double) 0.5 * ((lastPeakTime[1] - lastPeakTime[3]) + (lastPeakTime[2] - lastPeakTime[4])) / 1000.0;  
   
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
   Serial.print(F("ultimate period "));
   Serial.println(Pu);
 #endif 
@@ -617,7 +617,7 @@ bool PID_ATune::Runtime()
     // calculate gain ratio
     double kappa_phi = (1.0 / Ku) / K_process;
 
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
   Serial.print(F("gain ratio kappa "));
   Serial.println(kappa_phi);
 #endif
@@ -625,7 +625,7 @@ bool PID_ATune::Runtime()
     // calculate phase lag
     phaseLag = CalculatePhaseLag(inducedAmplitude);
 
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
   Serial.print(F("phase lag "));
   Serial.println(phaseLag / CONST_PI * 180.0);
 #endif
@@ -672,7 +672,7 @@ double PID_ATune::processValueOffset(double avgStep1, double avgStep2)
   // ratio of step durations
   double r1 = avgStep1 / avgStep2;
   
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
   Serial.print(F("r1 "));
   Serial.println(r1);
 #endif
@@ -690,7 +690,7 @@ double PID_ATune::processValueOffset(double avgStep1, double avgStep2)
   // ratio of integrated process values
   double r2 = s1 / s2;
 
-#if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
+#if defined AUTOTUNE_DEBUG | defined USE_SIMULATOR
   Serial.print(F("r2 "));
   Serial.println(r2);
 #endif

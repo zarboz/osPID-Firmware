@@ -9,17 +9,20 @@
 class ospSimulator : public ospBaseInputDevice, public ospBaseOutputDevice 
 {
 private:
-  double kpmodel, taup, theta[30];
-  double input;
+  double kpmodel, taup, theta[10];
+  double processValue;
+  int    modelDelay;
 
   static const double outputStart = 50.0f;  
-  static const double inputStart = 250.0f;
+  static const double processValueStart = 100.0f;
+  
+  bool initializationStatus;
 
 public:
   ospSimulator()
     : ospBaseInputDevice(), ospBaseOutputDevice()
-    ioType(INPUT_SIMULATOR)
   {
+    ioType = INPUT_SIMULATOR;
   }
 
   // input and output types
@@ -28,19 +31,46 @@ public:
   // setup the device
   void initialize() 
   {
-    input = inputStart;
-    for (int i = 0; i < 30; i++)
+    kpmodel = 2.0;
+    taup = 100.0;
+    modelDelay = 10;
+    processValue = processValueStart;
+    for (int i = 0; i < modelDelay; i++)
     {
       theta[i] = outputStart;
     }
-    setInitializationStatus(true);
+    this->setInitializationStatus(true);
+  }
+  
+  // get initialization status
+  bool getInitializationStatus()
+  {
+    return initializationStatus;
+  }
+
+  // set initialization status
+  void setInitializationStatus(bool newInitializationStatus)
+  {
+    initializationStatus = newInitializationStatus;
+  }
+  
+  unsigned long requestInput() 
+  {
+    return 250; // 250 ms read delay
+  }
+
+  // pretend to read an input from the input device
+  double readInput() 
+  {
+    updateModel();
+    return processValue;
   }
 
   // return the device identifier
   const char *IODeviceIdentifier() { return "SIML"; }
 
   // how many settings does this device have
-  byte floatSettingsCount() { return 2; }
+  byte floatSettingsCount() { return 3; }
 
   // read settings from the device
   double readFloatSetting(byte index) 
@@ -51,6 +81,8 @@ public:
       return kpmodel;
     case 1:
       return taup;
+    case 2:
+      return modelDelay;
     default:
       return -1.0f;
     }
@@ -67,8 +99,27 @@ public:
     case 1:
       taup = val;
       return true;
+    case 2:
+      modelDelay = (int)val;
+      return true;
     default:
       return false;
+    }
+  }
+
+  // describe the device settings
+  const __FlashStringHelper *describeFloatSetting(byte index) 
+  {
+    switch (index)
+    {
+    case 0:
+      return F("Simulated process gain");
+    case 1:
+      return F("Simulated lag value");
+    case 2:
+      return F("Simulated model delay");
+    default:
+      return NULL;
     }
   }
 
@@ -77,39 +128,35 @@ public:
   {
     settings.save(kpmodel);
     settings.save(taup);
+    settings.save(modelDelay);
   }
 
   void restoreSettings(ospSettingsHelper& settings) 
   {
     settings.restore(kpmodel);
     settings.restore(taup);
-  }
-
-  // pretend to read an input from the input device
-  double readInput() 
-  {
-    updateModel();
-    return input;
+    settings.restore(modelDelay);
   }
 
   // pretend to write a control signal to the output device
   void setOutputPercent(double percent) 
   {
-    theta[29] = percent;
+    theta[modelDelay - 1] = percent;
   }
 
 private:
   void updateModel()
   {
-    // Cycle the dead time
-    for (byte i = 0; i < 30; i++)
+    // cycle the dead time
+    for (byte i = 0; i < (modelDelay - 1); i++)
     {
-      theta[i] = theta[i+1];
+      theta[i] = theta[i + 1];
     }
-    // Compute the input
-    input = (kpmodel / taup) * (theta[0] - outputStart) + 
-            (input - inputStart) * (1.0 - 1.0 / taup) + 
-            inputStart + 
+    
+    // compute the process value
+    processValue = (kpmodel / taup) * (theta[0] - outputStart) + 
+            (processValue - processValueStart) * (1.0 - 1.0 / taup) + 
+            processValueStart + 
             ((double) random(-10, 10)) / 100.0;
   }
 };
