@@ -8,19 +8,28 @@ class PID
 {
   public:
 
-  //Constants used in some of the functions below
-  static const byte AUTOMATIC = 1;
-  static const byte MANUAL    = 0;
-  static const byte DIRECT    = 0;
-  static const byte REVERSE   = 1;
+  // constants ***************************************************************************************
+  
+    // automatic or manual control
+    static const byte MANUAL    = 0;
+    static const byte AUTOMATIC = 1;
+  
+    // sign of controller gain
+    static const byte DIRECT    = 0;
+    static const byte REVERSE   = 1;
 
-  //commonly used functions **************************************************************************
+   // how often to step the PID loop, in milliseconds: it is impractical to set this
+   // to less than ~1000 (i.e. faster than 1 Hz), since (a) the input has up to 750 ms
+   // of latency, and (b) the controller needs time to handle the LCD, EEPROM, and serial I/O
+     static const long LOOP_SAMPLE_TIME = 1000;
+
+  // commonly used functions **************************************************************************
     PID(double*, double*, double*,        // * constructor.  links the PID to the Input, Output, and 
         ospDecimalValue<3>,               //   Setpoint.  Initial tuning parameters are also set here
         ospDecimalValue<3>,
-        ospDecimalValue<3>, int);
+        ospDecimalValue<3>, byte);
 	
-    void SetMode(byte Mode);              // * sets PID to either Manual (0) or Auto (non-0)
+    void SetMode(byte);                   // * sets PID to either Manual (0) or Auto (non-0)
 
     void Compute();                       // * performs the PID calculation.  it should be
                                           //   called every time loop() cycles. ON/OFF and
@@ -33,7 +42,7 @@ class PID
 	
 
 
-  //available but not commonly used functions ********************************************************
+  // available but not commonly used functions ********************************************************
     void SetTunings(ospDecimalValue<3>,   // * While most users will set the tunings once in the    
         ospDecimalValue<3>,         	  //   constructor, this function gives the user the option  
         ospDecimalValue<3>);              //   of changing tunings during runtime for Adaptive control
@@ -46,7 +55,7 @@ class PID
 										  
 										  
 										  
-  //Display functions ****************************************************************
+  // display functions ****************************************************************
     ospDecimalValue<3> GetKp();           // These functions query the pid for interal values.
     ospDecimalValue<3> GetKi();	          //  they were created mainly for the pid front-end,
     ospDecimalValue<3> GetKd();           // where it's important to know what is actually 
@@ -54,6 +63,7 @@ class PID
     byte GetDirection();		  //
 
   private:
+  
     void Initialize();
     void Limit(double*);
 	
@@ -65,19 +75,19 @@ class PID
     double ki;                            // * (I)ntegral Tuning Parameter
     double kd;                            // * (D)erivative Tuning Parameter
 
-    int controllerDirection;
+    byte controllerDirection;
 
-    double *myInput;              // * Pointers to the Input, Output, and Setpoint variables
-    double *myOutput;             //   This creates a hard link between the variables and the 
-    double *mySetpoint;           //   PID, freeing the user from having to constantly tell us
-                                  //   what these values are.  with pointers we'll just know.
+    double *myInput;                      // * Pointers to the Input, Output, and Setpoint variables
+    double *myOutput;                     //   This creates a hard link between the variables and the 
+    double *mySetpoint;                   //   PID, freeing the user from having to constantly tell us
+                                          //   what these values are.  with pointers we'll just know.
 			  
-	unsigned long lastTime;
-	double ITerm, lastInput;
+    unsigned long lastTime;
+    double ITerm, lastInput;
 
-	int SampleTime;
-	double outMin, outMax;
-	bool inAuto;
+    int SampleTime;
+    double outMin, outMax;
+    bool inAuto;
 };
 #endif
 

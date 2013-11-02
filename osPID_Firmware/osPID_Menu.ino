@@ -129,15 +129,15 @@ PROGMEM const byte temperatureItems[4] = { ITEM_SETPOINT, ITEM_INPUT, ITEM_LOWER
 // This must be in the same order as the ITEM_*_MENU enumeration values
 PROGMEM const MenuItem menuData[MENU_COUNT + 1] =
 { 
-  { sizeof(mainMenuItems), 0, mainMenuItems               } ,
-  { sizeof(dashMenuItems), 0, dashMenuItems               } ,
-  { sizeof(profileMenuItems), 0, profileMenuItems         } ,
-  { sizeof(configMenuItems), 0, configMenuItems           } ,
-  { sizeof(setpointMenuItems), MENU_FLAG_2x2_FORMAT, setpointMenuItems               } ,
-  { sizeof(tripMenuItems), 0, tripMenuItems               } ,
-  { sizeof(inputMenuItems), 0, inputMenuItems             } ,
-  { sizeof(poweronMenuItems), 0, poweronMenuItems         } ,
-  { sizeof(resetRomMenuItems), 0, resetRomMenuItems       } 
+  { sizeof(mainMenuItems),     0,                    mainMenuItems       } ,
+  { sizeof(dashMenuItems),     0,                    dashMenuItems       } ,
+  { sizeof(profileMenuItems),  0,                    profileMenuItems    } ,
+  { sizeof(configMenuItems),   0,                    configMenuItems     } ,
+  { sizeof(setpointMenuItems), MENU_FLAG_2x2_FORMAT, setpointMenuItems   } ,
+  { sizeof(tripMenuItems),     0,                    tripMenuItems       } ,
+  { sizeof(inputMenuItems),    0,                    inputMenuItems      } ,
+  { sizeof(poweronMenuItems),  0,                    poweronMenuItems    } ,
+  { sizeof(resetRomMenuItems), 0,                    resetRomMenuItems   } 
 };
 
 
@@ -1092,7 +1092,7 @@ static void okKeyPress()
       menuState.highlightedItemMenuIndex = setPointIndex;
       break;
     case ITEM_INPUT_MENU:
-      menuState.highlightedItemMenuIndex = inputType;
+      menuState.highlightedItemMenuIndex = theInputDevice.ioType;
       break;
     case ITEM_POWERON_MENU:
       menuState.highlightedItemMenuIndex = powerOnBehavior;
@@ -1183,10 +1183,10 @@ static void okKeyPress()
   case ITEM_INPUT_ONEWIRE:
   case ITEM_INPUT_THERMOCOUPLE:
     // update inputType
-    inputType = (item - ITEM_INPUT_THERMISTOR);
+    theInputDevice.ioType = (item - ITEM_INPUT_THERMISTOR);
 #else  
   case ITEM_INPUT_SIMULATOR:
-    inputType = INPUT_SIMULATOR;
+    theInputDevice.ioType = INPUT_SIMULATOR;
 #endif  
 
     theInputDevice.initialize();

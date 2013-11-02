@@ -18,7 +18,7 @@
 * reliable defaults, so we need to have the user set them.
 ***************************************************************************/
 PID::PID(double* Input, double* Output, double* Setpoint,
-        ospDecimalValue<3> Kp, ospDecimalValue<3> Ki, ospDecimalValue<3> Kd, int ControllerDirection)
+        ospDecimalValue<3> Kp, ospDecimalValue<3> Ki, ospDecimalValue<3> Kd, byte ControllerDirection)
 {
   // default output limit corresponds to
   // the arduino pwm limits

@@ -4,11 +4,6 @@
 #include "ospIODevice.h"
 #include "ospSettingsHelper.h"
 
-enum {INPUT_SIMULATOR = 3};
-byte inputType = { INPUT_SIMULATOR };
-
-
-
 // a "device" which simulates a simple plant including a proportional heating
 // term, a thermal loss rate, and some measurement noise
 class ospSimulator : public ospBaseInputDevice, public ospBaseOutputDevice 
@@ -23,15 +18,21 @@ private:
 public:
   ospSimulator()
     : ospBaseInputDevice(), ospBaseOutputDevice()
+    ioType(INPUT_SIMULATOR)
   {
   }
+
+  // input and output types
+  byte ioType;
 
   // setup the device
   void initialize() 
   {
     input = inputStart;
-    for(int i = 0; i < 30; i++)
+    for (int i = 0; i < 30; i++)
+    {
       theta[i] = outputStart;
+    }
     setInitializationStatus(true);
   }
 
@@ -106,10 +107,11 @@ private:
       theta[i] = theta[i+1];
     }
     // Compute the input
-    input = (kpmodel / taup) * (theta[0] - outputStart) + (input - inputStart) * (1 - 1 / taup) + inputStart + ((double) random(-10, 10)) / 100;
+    input = (kpmodel / taup) * (theta[0] - outputStart) + 
+            (input - inputStart) * (1.0 - 1.0 / taup) + 
+            inputStart + 
+            ((double) random(-10, 10)) / 100.0;
   }
 };
-
-
 
 #endif

@@ -57,7 +57,7 @@ static void startAutoTune()
   }
   aTune.SetOutputStep(s);
   
-  if (tuningRule[aTuneMethod].PI_controller())
+  if (aTuneMethod == PID_ATune::AMIGOF_PI || tuningRule[aTuneMethod].PI_controller())
   {
     myPID.SetTunings(makeDecimal<3>(aTune.GetKp()), makeDecimal<3>(aTune.GetKi()), (ospDecimalValue<3>){0});
   }

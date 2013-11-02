@@ -4,20 +4,12 @@
 #include "ospIODevice.h"
 #include "ospSettingsHelper.h"
 
-
-enum { OUTPUT_SSR = 0 };
-byte outputType = OUTPUT_SSR;
-
-  
-
 class ospOutputDeviceSsr : 
   public ospBaseOutputDevice 
 {
 private:
-  
   ospDecimalValue<1> outputWindowSeconds;
   unsigned long outputWindowMilliseconds;
-
 
 public:
   ospOutputDeviceSsr() : 
@@ -26,9 +18,13 @@ public:
     // default of output cycle length 5s 
     // this is OK for SSR depending on the load
     // needs to be longer for electromechanical relay
-    outputWindowMilliseconds(5000) 
+    outputWindowMilliseconds(5000), 
+    ioType(OUTPUT_SSR)
   { 
   }
+
+  // input and output types
+  byte ioType;
   
   void initialize() 
   {
@@ -101,7 +97,9 @@ public:
   const __FlashStringHelper *describeFloatSetting(byte index) 
   {
     if (index == 0) 
+    {
       return F("Output PWM cycle length in seconds");
+    }
     return NULL;
   }
 /*
@@ -130,6 +128,5 @@ public:
     digitalWrite(SsrPin, (oVal > wind) ? HIGH : LOW);
   }
 };
-
 
 #endif

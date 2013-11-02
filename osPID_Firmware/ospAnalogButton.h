@@ -5,18 +5,21 @@
 
 #include "ospAssert.h"
 
+// button constants
 enum ospAnalogButtonValue
 {
-	BUTTON_NONE,
-	BUTTON_RETURN,	
-	BUTTON_UP,
-	BUTTON_DOWN,
-	BUTTON_OK
+  BUTTON_NONE,
+  BUTTON_RETURN,	
+  BUTTON_UP,
+  BUTTON_DOWN,
+  BUTTON_OK
 };
 
 template<byte analogPin, int buttonValueOk, int buttonValueDown, int buttonValueUp, int buttonValueReturn>
-class ospAnalogButton {
+class ospAnalogButton 
+{
 public:
+
   ospAnalogButton()
     : activeButton(BUTTON_NONE)
     , currentState(BUTTON_STATE_SCAN)
@@ -80,30 +83,39 @@ private:
     int	buttonValue = analogRead(analogPin);
     
     if (buttonValue >= BUTTON_NONE_THRESHOLD)
+    {
       return BUTTON_NONE;
+    }
     if (buttonValue <= threshold(buttonValueOk))
+    {
       return BUTTON_OK;
+    }
     if (buttonValue <= threshold(buttonValueDown))
+    {
       return BUTTON_DOWN;
+    }
     if (buttonValue <= threshold(buttonValueUp))
+    {
       return BUTTON_UP;
+    }
     if (buttonValue <= threshold(buttonValueReturn))
+    {
       return BUTTON_RETURN;
+    }
     
     return BUTTON_NONE;
   }
 
-  enum State {
+  enum State 
+  {
     BUTTON_STATE_SCAN,
     BUTTON_STATE_DEBOUNCE,
     BUTTON_STATE_WAIT_RELEASE,
     BUTTON_STATE_DEBOUNCE_RELEASE
   };
 
-  enum {
-    BUTTON_NONE_THRESHOLD = 1000,
-    DEBOUNCE_PERIOD = 10
-  };
+  static const int  BUTTON_NONE_THRESHOLD = 1000;
+  static const long DEBOUNCE_PERIOD = 10;
 
   inline static int threshold(int expectedValue)
   {

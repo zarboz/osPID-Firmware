@@ -863,7 +863,7 @@ static void processSerialCommand()
       serialPrintlnFloatTemp(activeSetPoint);
       break;
     case 's':
-      serialPrintln(inputType);
+      serialPrintln((byte)theInputDevice.ioType);
       break;
     case 'T':
       serialPrintln(tripped);
@@ -1198,7 +1198,7 @@ static void processSerialCommand()
     break;
   case 's': // set the inputType
     BOUNDS_CHECK(i1, 0, 2);
-    inputType = i1;
+    theInputDevice.ioType = (byte) i1;
     break;
   case 'T': // clear a trip
     if (!tripped)

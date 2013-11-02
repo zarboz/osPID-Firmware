@@ -7,21 +7,30 @@
 #include "DallasTemperature_local.h"
 #include "MAX31855_local.h"
 
-
 // class using crude switches 
 // instead of pretty virtual methods
 // that there is not space to accommodate
-
-enum { INPUT_THERMISTOR = 0, INPUT_ONEWIRE, INPUT_THERMOCOUPLE };
-byte inputType = INPUT_THERMISTOR;
-
 
 class ospInputDevice : 
   public ospBaseInputDevice 
 {
 private:
+
+  // minimum refresh rate for input measurements
+  // NB OneWire devices have a considerably longer latency than this
+  static const int MINIMUM_SAMPLE_TIME = 100;
+
+  // default parameters for thermistor
+  static const double THERMISTOR_NOMINAL_RESISTANCE   = 10.0f;
+  static const double THERMISTOR_B_COEFFICIENT        = 1.0f;
+  static const double THERMISTOR_TEMPERATURE_NOMINAL  = 293.15;
+  static const double THERMISTOR_REFERENCE_RESISTANCE = 10.0f;
+
+  bool initializationStatus;
+  double inputSetting[7];
   
-  enum // settings
+  // setting indices
+  enum 
   { 
     CALIBRATION_THERMISTOR = 0,
     CALIBRATION_ONEWIRE,
@@ -31,9 +40,6 @@ private:
     TEMPERATURE,
     REFERENCE
   };    
-
-  bool initializationStatus;
-  double inputSetting[7];
 
   OneWire oneWire;
   DallasTemperature oneWireDevice;
@@ -56,22 +62,27 @@ private:
   
 
 public:
+
   ospInputDevice() :
     ospBaseInputDevice(),
     initializationStatus(false),
     oneWire(oneWireBus),
     oneWireDevice(&oneWire),
-    thermocouple(thermocoupleCLK_Pin, thermocoupleCS_Pin, thermocoupleSO_Pin)
+    thermocouple(thermocoupleCLK_Pin, thermocoupleCS_Pin, thermocoupleSO_Pin),
+    ioType(INPUT_THERMISTOR)
   { 
     inputSetting[NOMINAL]       = THERMISTOR_NOMINAL_RESISTANCE;
     inputSetting[BCOEFFICIENT]  = THERMISTOR_B_COEFFICIENT;
     inputSetting[TEMPERATURE]   = THERMISTOR_TEMPERATURE_NOMINAL;
     inputSetting[REFERENCE]     = THERMISTOR_REFERENCE_RESISTANCE;
   }
+
+  // input and output types
+  byte ioType;
   
   void initialize() 
   {
-    if (inputType == INPUT_ONEWIRE)
+    if (ioType == INPUT_ONEWIRE)
     {
       oneWireDevice.begin();
       if (!oneWireDevice.getAddress(oneWireDeviceAddress, 0)) 
@@ -85,7 +96,7 @@ public:
         oneWireDevice.setWaitForConversion(false);
       }
     }
-    else if (inputType == INPUT_THERMISTOR)
+    else if (ioType == INPUT_THERMISTOR)
     {
       pinMode(thermistorPin, INPUT);
     }
@@ -94,7 +105,7 @@ public:
   
   const __FlashStringHelper *IODeviceIdentifier()
   {
-    switch (inputType)
+    switch (ioType)
     {
     case INPUT_THERMISTOR:
       return F("NTC thermistor");
@@ -117,7 +128,9 @@ public:
   double readFloatSetting(byte index) 
   {
     if (index > 6)
+    {
       return NULL;
+    }
     return inputSetting[index];
   }
     
@@ -125,7 +138,9 @@ public:
   bool writeFloatSetting(byte index, double val) 
   {
     if (index > 6)
+    {
       return false;
+    }
     inputSetting[index] = val;
     return true;
   }
@@ -201,18 +216,18 @@ public:
   // returns conversion time in milliseconds
   unsigned long requestInput() 
   {
-    if (inputType == INPUT_ONEWIRE)
+    if (ioType == INPUT_ONEWIRE)
     {
       oneWireDevice.requestTemperatures();
       return 750;
     }
-    return INPUT_MINIMUM_SAMPLE_TIME;
+    return MINIMUM_SAMPLE_TIME;
   }
 
   double readInput()
   {
     double temperature;
-    switch (inputType)
+    switch (ioType)
     {
     case INPUT_THERMISTOR:
       int voltage;
@@ -230,11 +245,13 @@ public:
     default:
       return NAN;
     }
+
 #if !defined UNITS_FAHRENHEIT
-    return temperature + inputSetting[inputType];
+    return temperature + inputSetting[ioType];
 #else
-    return (temperature * 1.8 + 32.0) + inputSetting[inputType];
+    return (temperature * 1.8 + 32.0) + inputSetting[ioType];
 #endif
+
   }
   
   // get initialization status
@@ -252,15 +269,14 @@ public:
   // get calibration
   ospDecimalValue<1> getCalibration()
   {
-    return makeDecimal<1>(inputSetting[inputType]);
+    return makeDecimal<1>(inputSetting[ioType]);
   }
 
   // set calibration
   void setCalibration(ospDecimalValue<1> newCalibration)
   {
-    inputSetting[inputType] = double(newCalibration);
+    inputSetting[ioType] = double(newCalibration);
   }  
 };
-
 
 #endif

@@ -35,16 +35,16 @@ PID_ATune::PID_ATune(double* Input, double* Output)
   output = Output;
 
   // constructor defaults
-  controlType = PID_ATune::ZIEGLER_NICHOLS_PI;
+  controlType = ZIEGLER_NICHOLS_PI;
   noiseBand = 0.5;
-  state = PID_ATune::AUTOTUNER_OFF;
+  state = AUTOTUNER_OFF;
   oStep = 10;
   SetLookbackSec(10);
 }
 
 void PID_ATune::Cancel()
 {
-  state = PID_ATune::AUTOTUNER_OFF;
+  state = AUTOTUNER_OFF;
 }
 
 #if defined AUTOTUNE_AMIGOF_PI
@@ -64,7 +64,7 @@ double PID_ATune::CalculatePhaseLag(double inducedAmplitude)
   double ratio = 2.0 * noiseBand / inducedAmplitude;
   if (ratio > 1.0)
   {
-    return PID_ATune::CONST_PI / 2.0;
+    return CONST_PI / 2.0;
   }
   else
   {
@@ -79,10 +79,10 @@ bool PID_ATune::Runtime()
   // check ready for new input
   unsigned long now = millis();
 
-  if (state == PID_ATune::AUTOTUNER_OFF)
+  if (state == AUTOTUNER_OFF)
   { 
     // initialize working variables the first time around
-    peakType = PID_ATune::NOT_A_PEAK;
+    peakType = NOT_A_PEAK;
     inputCount = 0;
     peakCount = 0;
     setpoint = *input;
@@ -104,16 +104,16 @@ bool PID_ATune::Runtime()
     // move to new state
 
 #if defined AUTOTUNE_AMIGOF_PI    
-    if (controlType == PID_ATune::AMIGOF_PI)
+    if (controlType == AMIGOF_PI)
     {
-      state = PID_ATune::STEADY_STATE_AT_BASELINE;
+      state = STEADY_STATE_AT_BASELINE;
     }
     else
     {
-      state = PID_ATune::RELAY_STEP_UP;
+      state = RELAY_STEP_UP;
     }
 #else
-    state = PID_ATune::RELAY_STEP_UP;
+    state = RELAY_STEP_UP;
 #endif
 
   }
@@ -137,14 +137,14 @@ bool PID_ATune::Runtime()
   bool justChanged = false; 
 
   // check input and change relay state if necessary
-  if ((state == PID_ATune::RELAY_STEP_UP) && (refVal > setpoint + noiseBand))
+  if ((state == RELAY_STEP_UP) && (refVal > setpoint + noiseBand))
   {
-    state = PID_ATune::RELAY_STEP_DOWN;
+    state = RELAY_STEP_DOWN;
     justChanged = true;
   }
-  else if ((state == PID_ATune::RELAY_STEP_DOWN) && (refVal < setpoint - noiseBand))
+  else if ((state == RELAY_STEP_DOWN) && (refVal < setpoint - noiseBand))
   {
-    state = PID_ATune::RELAY_STEP_UP;
+    state = RELAY_STEP_UP;
     justChanged = true;
   }
   if (justChanged)
@@ -244,7 +244,7 @@ bool PID_ATune::Runtime()
 #endif    
 
   }
-  else if (state == PID_ATune::RELAY_STEP_DOWN)
+  else if (state == RELAY_STEP_DOWN)
   {
     
 #if defined AUTOTUNE_RELAY_BIAS    
@@ -300,7 +300,7 @@ bool PID_ATune::Runtime()
   // step change to calculate process gain K_process
   // this may be very slow for lag-dominated processes
   // and may never terminate for integrating processes 
-  if (((byte) state & (PID_ATune::STEADY_STATE_AT_BASELINE | PID_ATune::STEADY_STATE_AFTER_STEP_UP)) > 0)
+  if (((byte) state & (STEADY_STATE_AT_BASELINE | STEADY_STATE_AFTER_STEP_UP)) > 0)
   {
     // check that all the recent inputs are 
     // equal give or take expected noise
@@ -341,14 +341,14 @@ bool PID_ATune::Runtime()
       lastStepTime[0] = now;
 #endif
 
-      if (state == PID_ATune::STEADY_STATE_AT_BASELINE)
+      if (state == STEADY_STATE_AT_BASELINE)
       {
-        state = PID_ATune::STEADY_STATE_AFTER_STEP_UP;
+        state = STEADY_STATE_AFTER_STEP_UP;
         lastPeaks[0] = avgInput;  
         inputCount = 0;
         return false;
       }
-      // else state == PID_ATune::STEADY_STATE_AFTER_STEP_UP
+      // else state == STEADY_STATE_AFTER_STEP_UP
       
       // calculate process gain
       K_process = (avgInput - lastPeaks[0]) / oStep;
@@ -361,10 +361,10 @@ bool PID_ATune::Runtime()
       // bad estimate of process gain
       if (K_process < 1e-10) // zero
       {
-        state = PID_ATune::AUTOTUNER_OFF;
+        state = AUTOTUNER_OFF;
         return false;
       }
-      state = PID_ATune::RELAY_STEP_DOWN;
+      state = RELAY_STEP_DOWN;
 
 #if defined AUTOTUNE_RELAY_BIAS      
       sumInputSinceLastStep[0] = 0.0;
@@ -385,15 +385,15 @@ bool PID_ATune::Runtime()
   justChanged = false;
   if (isMax)
   {
-    if (peakType == PID_ATune::MINIMUM)
+    if (peakType == MINIMUM)
     {
       justChanged = true;
     }
-    peakType = PID_ATune::MAXIMUM;
+    peakType = MAXIMUM;
   }
   else if (isMin)
   {
-    if (peakType == PID_ATune::MAXIMUM)
+    if (peakType == MAXIMUM)
     {
       justChanged = true;
     }
@@ -517,7 +517,7 @@ bool PID_ATune::Runtime()
         // aiming for 135° = 0.75 * pi (radians)
         // sin(135°) = sqrt(2)/2
         // NB noiseBand = 0.5 * hysteresis
-        newNoiseBand = 0.5 * inducedAmplitude * PID_ATune::CONST_SQRT2_DIV_2;
+        newNoiseBand = 0.5 * inducedAmplitude * CONST_SQRT2_DIV_2;
 
 #if defined AUTOTUNE_RELAY_BIAS
         // we could reset relay step counter because we can't rely
@@ -541,9 +541,9 @@ bool PID_ATune::Runtime()
 #endif // if defined AUTOTUNE_AMIGOF_PI    
 
     // check convergence criterion for amplitude of induced oscillation
-    if (((0.5 * (absMax - absMin) - inducedAmplitude) / inducedAmplitude) < AUTOTUNE_PEAK_AMPLITUDE_TOLERANCE)
+    if (((0.5 * (absMax - absMin) - inducedAmplitude) / inducedAmplitude) < PEAK_AMPLITUDE_TOLERANCE)
     {
-      state = PID_ATune::CONVERGED;
+      state = CONVERGED;
     }
   }
     
@@ -554,17 +554,17 @@ bool PID_ATune::Runtime()
   if (
 
 #if defined AUTOTUNE_RELAY_BIAS  
-    ((now - lastStepTime[0]) > (unsigned long) (AUTOTUNE_MAX_WAIT_MINUTES * 60000)) ||
+    ((now - lastStepTime[0]) > (unsigned long) (MAX_WAIT_MINUTES * 60000)) ||
 #endif
 
-    ((now - lastPeakTime[0]) > (unsigned long) (AUTOTUNE_MAX_WAIT_MINUTES * 60000)) ||
+    ((now - lastPeakTime[0]) > (unsigned long) (MAX_WAIT_MINUTES * 60000)) ||
     (peakCount >= 20)
   )
   {
-    state = PID_ATune::FAILED;
+    state = FAILED;
   }
   
-  if (((byte) state & (PID_ATune::CONVERGED | PID_ATune::FAILED)) == 0)
+  if (((byte) state & (CONVERGED | FAILED)) == 0)
   {
     return false;
   }
@@ -612,7 +612,7 @@ bool PID_ATune::Runtime()
   // requires an estimate of the process gain which is implemented in this
   // routine by steady state change in process variable after step change in set point
   // It is intended to give robust tunings for both lag- and delay- dominated processes
-  if (controlType == PID_ATune::AMIGOF_PI)
+  if (controlType == AMIGOF_PI)
   {
     // calculate gain ratio
     double kappa_phi = (1.0 / Ku) / K_process;
@@ -627,7 +627,7 @@ bool PID_ATune::Runtime()
 
 #if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
   Serial.print(F("phase lag "));
-  Serial.println(phaseLag / PID_ATune::CONST_PI * 180.0);
+  Serial.println(phaseLag / CONST_PI * 180.0);
 #endif
 
     // restore original value of noiseBand
@@ -644,8 +644,8 @@ bool PID_ATune::Runtime()
   }
 #endif // if defined AUTOTUNE_AMIGOF_PI    
 
-  Kp = Ku / tuningRule[controlType].divisor(PID_ATune::KP_DIVISOR);
-  Ti = Pu / tuningRule[controlType].divisor(PID_ATune::TI_DIVISOR);
+  Kp = Ku / tuningRule[controlType].divisor(KP_DIVISOR);
+  Ti = Pu / tuningRule[controlType].divisor(TI_DIVISOR);
   Td = tuningRule[controlType].PI_controller() ? 0.0 : Pu / tuningRule[controlType].divisor(PID_ATune::TD_DIVISOR);
 
   // converged

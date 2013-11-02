@@ -83,28 +83,6 @@ const bool unitsFahrenheit = false;
 
 // NB test compilation length using longest options: #undef STANDALONE_CONTROLLER, USE_SIMULATOR, SILENCE_BUZZER, and #define UNITS_FAHRENHEIT
 
-// default auto tune algorithm and parameters
-#define AUTO_TUNE_DEFAULT_METHOD                0       // ZIEGLER_NICHOLS_PI
-#define AUTO_TUNE_DEFAULT_OUTPUT_STEP           20
-#define AUTO_TUNE_DEFAULT_NOISE_BAND_CELSIUS    0.5
-#define AUTO_TUNE_DEFAULT_LOOKBACK_SEC          10
-
-// Default parameters forthermistor
-const double THERMISTOR_NOMINAL_RESISTANCE   = 10.0f;
-const double THERMISTOR_B_COEFFICIENT        = 1.0f;
-const double THERMISTOR_TEMPERATURE_NOMINAL  = 293.15;
-const double THERMISTOR_REFERENCE_RESISTANCE = 10.0f;
-
-// how often to step the PID loop, in milliseconds: it is impractical to set this
-// to less than ~1000 (i.e. faster than 1 Hz), since (a) the input has up to 750 ms
-// of latency, and (b) the controller needs time to handle the LCD, EEPROM, and serial
-// I/O
-enum { PID_LOOP_SAMPLE_TIME = 1000 };
-
-// minimum refresh rate for input measurements
-// NB OneWire devices have a considerably longer latency than this
-enum { INPUT_MINIMUM_SAMPLE_TIME = 100 };
-
 // autorepeat constants, in milliseconds
 enum 
 {
@@ -121,5 +99,9 @@ enum
 };
 
 #define DEFAULT_POWER_ON_BEHAVIOR POWERON_CONTINUE_LOOP
+
+// NB Auto tune defaults in PID_AutoTune header file
+
+// NB Thermistor default constants in ospInputDevice.h header file
 
 #endif

@@ -6,12 +6,21 @@
 
 class ospSettingsHelper;
 
-
 // a base class for both input and output IO devices
 class ospBaseIODevice 
 {
 public:
   ospBaseIODevice() { }
+
+  // device types
+  enum 
+  {
+    INPUT_THERMISTOR,
+    INPUT_ONEWIRE,
+    INPUT_THERMOCOUPLE,
+    OUTPUT_SSR,
+    INPUT_SIMULATOR
+  };
 
   // setup the IO device 
   void initialize() {}; 
@@ -41,7 +50,6 @@ public:
   void restoreSettings(ospSettingsHelper& settings) {};
 };
 
-
 class ospBaseInputDevice  : public ospBaseIODevice 
 {
 public:
@@ -52,7 +60,6 @@ public:
 
   double readInput() { return NAN; };
 };
-
 
 class ospBaseOutputDevice : public ospBaseIODevice 
 {

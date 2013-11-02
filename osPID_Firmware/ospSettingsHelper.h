@@ -8,7 +8,7 @@
 
 class ospSettingsHelper 
 {
-private:
+private: 
   unsigned int crc16;
   int address;
 
@@ -81,9 +81,7 @@ public:
 
     eepromClearBitsSize<sizeof(T)>(address, p);
   }
-
 };
-
 
 #endif
 

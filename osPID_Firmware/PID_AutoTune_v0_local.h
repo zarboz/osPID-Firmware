@@ -11,6 +11,8 @@
 #include "ospConfig.h"
 #include "ospDecimalValue.h"
 
+// compilation options
+
 // verbose debug option
 // requires open Serial port
 #undef AUTOTUNE_DEBUG
@@ -31,20 +33,6 @@
 // persuaded to converge where they might not 
 // otherwise have done so
 #undef AUTOTUNE_RELAY_BIAS
-
-// average amplitude of successive peaks must differ by no more than this proportion
-// relative to half the difference between maximum and minimum of last 2 cycles
-#define AUTOTUNE_PEAK_AMPLITUDE_TOLERANCE 0.05
-
-// ratio of up/down relay step duration should differ by no more than this tolerance
-// biasing the relay con give more accurate estimates of the tuning parameters but
-// setting the tolerance too low will prolong the autotune procedure unnecessarily
-// this parameter also sets the minimum bias in the relay as a proportion of its amplitude
-#define AUTOTUNE_STEP_ASYMMETRY_TOLERANCE 0.20
-
-// auto tune terminates if waiting too long between peaks or relay steps
-// set larger value for processes with long delays or time constants
-#define AUTOTUNE_MAX_WAIT_MINUTES 5
 
 // Ziegler-Nichols type auto tune rules
 // in tabular form
@@ -68,6 +56,22 @@ class PID_ATune
 
 public:
   // constants **********************************************************************************
+  
+  // configurable tolerances
+  //
+  // average amplitude of successive peaks must differ by no more than this proportion
+  // relative to half the difference between maximum and minimum of last 2 cycles
+  static const double PEAK_AMPLITUDE_TOLERANCE = 0.05;
+  //
+  // ratio of up/down relay step duration should differ by no more than this tolerance
+  // biasing the relay con give more accurate estimates of the tuning parameters but
+  // setting the tolerance too low will prolong the autotune procedure unnecessarily
+  // this parameter also sets the minimum bias in the relay as a proportion of its amplitude
+  static const double STEP_ASYMMETRY_TOLERANCE = 0.20;
+  //
+  // auto tune terminates if waiting too long between peaks or relay steps
+  // set larger value for processes with long delays or time constants
+  static const byte MAX_WAIT_MINUTES = 5;
   
   // auto tune methods
   static const byte ZIEGLER_NICHOLS_PI    = 0;	
@@ -109,6 +113,12 @@ public:
   // irrational constants
   static const double CONST_PI          = 3.14159265358979323846;
   static const double CONST_SQRT2_DIV_2 = 0.70710678118654752440;
+  
+  // default auto tune algorithm and parameters
+  static const byte   DEFAULT_METHOD                = ZIEGLER_NICHOLS_PI;	
+  static const int    DEFAULT_OUTPUT_STEP           = 200;
+  static const double DEFAULT_NOISE_BAND_CELSIUS    = 0.5;
+  static const int    DEFAULT_LOOKBACK_SEC          = 10;
 
   // commonly used methods **********************************************************************
   PID_ATune(double*, double*);          // * Constructor.  links the Autotune to a given PID

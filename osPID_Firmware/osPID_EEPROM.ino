@@ -149,7 +149,8 @@ static void setupEEPROM()
   if (checkEEPROMSettings()) 
   {
     restoreEEPROMSettings();
-  } else 
+  } 
+  else 
   {
     // bad CRC: save our hardcoded defaults
     drawBadCsum(0xFF);
@@ -163,12 +164,10 @@ static void clearEEPROM()
   // overwrite the CRC-16s
   unsigned int zero = 0;
   ospSettingsHelper::eepromWrite(SETTINGS_CRC_OFFSET, zero);
-
   for (byte i = 0; i < NR_PROFILES; i++) 
   {
     ospSettingsHelper::eepromWrite(PROFILE_BLOCK_START_OFFSET + i*PROFILE_BLOCK_LENGTH + PROFILE_CRC_OFFSET, zero);
   }
-
   // since the status buffer blocks are tagged by CRC-16 values, we don't need to do
   // anything with them
 }
@@ -176,14 +175,12 @@ static void clearEEPROM()
 static unsigned int checkEEPROMBlockCrc(int address, int length)
 {
   unsigned int crc = CRC16_INIT;
-
   while (length--) 
   {
     byte b = eeprom_read_byte((byte *)address);
     crc = _crc16_update(crc, b);
     address++;
   }
-
   return crc;
 }
 
@@ -191,15 +188,12 @@ static unsigned int checkEEPROMBlockCrc(int address, int length)
 static bool checkEEPROMSettings()
 {
   unsigned int storedCrc, calculatedCrc;
-
   calculatedCrc = checkEEPROMBlockCrc(SETTINGS_SBYTE1_OFFSET, SETTINGS_CRC_LENGTH);
   ospSettingsHelper::eepromRead(SETTINGS_CRC_OFFSET, storedCrc);
-
   if (calculatedCrc != storedCrc)
   {
     return false;
   }
-
   byte storedVersion;
   ospSettingsHelper::eepromRead(SETTINGS_VERSION_OFFSET, storedVersion);
   return (storedVersion == EEPROM_STORAGE_VERSION);
@@ -207,7 +201,8 @@ static bool checkEEPROMSettings()
 
 union SettingsByte1 
 {
-  struct {
+  struct 
+  {
     byte pidMode : 1;
     byte pidDirection : 1;
     byte powerOnBehavior : 2;
@@ -247,7 +242,7 @@ static void saveEEPROMSettings()
 
   sb2.byteVal = 0;
   sb2.activeProfileIndex = activeProfileIndex;
-  sb2.inputType = inputType;
+  sb2.inputType = (byte) theInputDevice.ioType;
   sb2.unitsFahrenheit = unitsFahrenheit;
   settings.save(sb2.byteVal);
 
@@ -256,7 +251,9 @@ static void saveEEPROMSettings()
   settings.save(DGain);
 
   for (byte i = 0; i < NR_SETPOINTS; i++)
+  {
     settings.save(setPoints[i]);
+  }
 
   settings.save(aTuneMethod);
   settings.save(aTuneStep);
@@ -305,8 +302,7 @@ static void restoreEEPROMSettings()
   */
 
   activeProfileIndex = sb2.activeProfileIndex;
-  inputType = sb2.inputType;
-
+  theInputDevice.ioType = (byte) sb2.inputType;
 
   settings.restore(sb1.byteVal);
   modeIndex = sb1.pidMode;
@@ -321,7 +317,9 @@ static void restoreEEPROMSettings()
   settings.restore(DGain);
 
   for (byte i = 0; i < NR_SETPOINTS; i++)
+  {
     settings.restore(setPoints[i]);
+  }
   updateActiveSetPoint();
   displaySetpoint = setPoints[0];
 
@@ -338,15 +336,18 @@ static void restoreEEPROMSettings()
   
   settings.skipTo(INPUT_DEVICE_SETTINGS_OFFSET);
   theInputDevice.restoreSettings(settings);
+
 #if !defined USE_SIMULATOR
   displayCalibration = theInputDevice.getCalibration();
 #endif
 
   settings.skipTo(OUTPUT_DEVICE_SETTINGS_OFFSET);
   theOutputDevice.restoreSettings(settings);
+
 #if !defined USE_SIMULATOR
   displayWindow = theOutputDevice.getOutputWindowSeconds();
 #endif
+
 }
 
 // check the CRC-16 of the i'th profile block
@@ -372,16 +373,24 @@ retry:
 
   // write the profile settings and calculate the CRC-16
   for (byte i = 0; i < ospProfile::NAME_LENGTH+1; i++)
+  {
     settings.save(profileBuffer.name[i]);
+  }
 
   for (byte i = 0; i < ospProfile::NR_STEPS; i++)
+  {
     settings.save(byte(profileBuffer.stepTypes[i] | swizzle));
+  }
 
   for (byte i = 0; i < ospProfile::NR_STEPS; i++)
+  {
     settings.save(profileBuffer.stepDurations[i]);
+  }
 
   for (byte i = 0; i < ospProfile::NR_STEPS; i++)
+  {
     settings.save(profileBuffer.stepEndpoints[i]);
+  }
 
   unsigned int crcValue = settings.crcValue();
 
@@ -404,10 +413,12 @@ static char getProfileNameCharAt(byte profileIndex, byte i)
                         + PROFILE_NAME_OFFSET
                         + i;
   char ch;
+
 #if !defined ATMEGA_32kB_FLASH
   ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
   ospAssert((i >= 0) && (i < ospProfile::NAME_LENGTH+1));
 #endif  
+
   ospSettingsHelper::eepromRead(address, ch);
 
   return ch;
@@ -421,6 +432,7 @@ static void getProfileStepData(byte profileIndex, byte i, byte *type, unsigned l
 #if !defined ATMEGA_32kB_FLASH
   ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
 #endif  
+
   ospSettingsHelper::eepromRead(base + PROFILE_STEP_TYPES_OFFSET + i, *type);
   *type &= ospProfile::STEP_CONTENT_MASK;
 
@@ -494,7 +506,9 @@ static bool profileWasInterrupted()
       return true;
     }
     else
+    {
       return false;
+    }
   }
 
   // didn't find anything

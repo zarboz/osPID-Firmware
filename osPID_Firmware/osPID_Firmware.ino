@@ -42,18 +42,17 @@
 
 
 
-
 #if !defined USE_SIMULATOR
 #include "ospOutputDeviceSsr.h"
 #include "ospInputDevice.h"
-enum { numInputDevices = 3 };
-enum { numOutputDevices = 1 };
+const byte numInputDevices = 3;
+const byte numOutputDevices = 1;
 ospInputDevice theInputDevice;
 ospOutputDeviceSsr theOutputDevice;
 #else
 #include "ospSimulator.h"
-enum { numInputDevices = 1 };
-enum { numOutputDevices = 1 };
+const byte numInputDevices = 1;
+const byte numOutputDevices = 1;
 ospSimulator theInputDevice;
 #define theOutputDevice theInputDevice
 #endif
@@ -130,16 +129,16 @@ byte powerOnBehavior = DEFAULT_POWER_ON_BEHAVIOR;
 bool controllerIsBooting = true;
 
 // auto tune algorithm
-byte aTuneMethod = AUTO_TUNE_DEFAULT_METHOD;
+byte aTuneMethod = PID_ATune::DEFAULT_METHOD;
 
 // the parameters for the autotuner
-ospDecimalValue<1> aTuneStep  = { AUTO_TUNE_DEFAULT_OUTPUT_STEP * 10 };
+ospDecimalValue<1> aTuneStep  = makeDecimal<1>(PID_ATune::DEFAULT_OUTPUT_STEP);
 #if !defined UNITS_FAHRENHEIT
-ospDecimalValue<1> aTuneNoise = { AUTO_TUNE_DEFAULT_NOISE_BAND_CELSIUS * 18 }; 
+ospDecimalValue<1> aTuneNoise = makeDecimal<1>(PID_ATune::DEFAULT_NOISE_BAND_CELSIUS * 1.8); 
 #else 
-ospDecimalValue<1> aTuneNoise = { AUTO_TUNE_DEFAULT_NOISE_BAND_CELSIUS * 10 }; 
+ospDecimalValue<1> aTuneNoise = makeDecimal<1>(PID_ATune::DEFAULT_NOISE_BAND_CELSIUS);
 #endif
-int aTuneLookBack = AUTO_TUNE_DEFAULT_LOOKBACK_SEC; 
+int aTuneLookBack = PID_ATune::DEFAULT_LOOKBACK_SEC; 
 PID_ATune aTune(&lastGoodInput, &output);
 
 // whether the autotuner is active
@@ -287,7 +286,7 @@ void setup()
 
   // configure the PID loop 
   updateActiveSetPoint();
-  myPID.SetSampleTime(PID_LOOP_SAMPLE_TIME);
+  myPID.SetSampleTime(PID::LOOP_SAMPLE_TIME);
   myPID.SetOutputLimits(0, 100);
   myPID.SetTunings(PGain, IGain, DGain);
   myPID.SetControllerDirection(ctrlDirection);
