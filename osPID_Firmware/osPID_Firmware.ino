@@ -6,10 +6,10 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "ospConfig.h"
+#include "ospDecimalValue.h"
 #include "PID_v1_local.h"
 #include "PID_AutoTune_v0_local.h"
 #include "ospAnalogButton.h"
-#include "ospDecimalValue.h"
 #include "ospProfile.h"
 
 #undef BUGCHECK
@@ -80,11 +80,11 @@ boolean runningProfile = false;
 ospDecimalValue<3> PGain = { 1000 }, IGain = { 0 }, DGain = { 0 };
 
 // the direction flag for the PID controller
-byte ctrlDirection = DIRECT;
+byte ctrlDirection = PID::DIRECT;
 
 // whether the controller is executing a PID law or just outputting a manual
 // value
-byte modeIndex = MANUAL;
+byte modeIndex = PID::MANUAL;
 
 // the 4 setpoints we can easily switch between
 #if !defined UNITS_FAHRENHEIT
@@ -146,7 +146,7 @@ PID_ATune aTune(&lastGoodInput, &output);
 bool tuning = false;
 
 // the actual PID controller
-PID myPID(&lastGoodInput, &output, &activeSetPoint, double(PGain), double(IGain), double(DGain), DIRECT);
+PID myPID(&lastGoodInput, &output, &activeSetPoint, PGain, IGain, DGain, PID::DIRECT);
 
 // timekeeping to schedule the various tasks in the main loop
 unsigned long now, lcdTime, readInputTime;
@@ -289,12 +289,12 @@ void setup()
   updateActiveSetPoint();
   myPID.SetSampleTime(PID_LOOP_SAMPLE_TIME);
   myPID.SetOutputLimits(0, 100);
-  myPID.SetTunings(double(PGain), double(IGain), double(DGain));
+  myPID.SetTunings(PGain, IGain, DGain);
   myPID.SetControllerDirection(ctrlDirection);
 
   if (powerOnBehavior == POWERON_DISABLE) 
   {
-    modeIndex = MANUAL;
+    modeIndex = PID::MANUAL;
     setOutputToManualOutput();
   }
   myPID.SetMode(modeIndex);
@@ -420,8 +420,8 @@ static void completeAutoTune()
 
   // set the PID controller to accept the new gain settings
   // use whatever direction of control is currently set
-  //myPID.SetControllerDirection(DIRECT);
-  myPID.SetMode(AUTOMATIC);
+  //myPID.SetControllerDirection(PID::DIRECT);
+  myPID.SetMode(PID::AUTOMATIC);
 
   if (PGain < (ospDecimalValue<3>){0})
   {
@@ -430,19 +430,19 @@ static void completeAutoTune()
     PGain = -PGain;
     IGain = -IGain;
     DGain = -DGain;
-    if (ctrlDirection == DIRECT)
+    if (ctrlDirection == PID::DIRECT)
     {
-      myPID.SetControllerDirection(REVERSE);
-      ctrlDirection = REVERSE;
+      myPID.SetControllerDirection(PID::REVERSE);
+      ctrlDirection = PID::REVERSE;
     }
     else
     {
-      myPID.SetControllerDirection(DIRECT);
-      ctrlDirection = DIRECT;
+      myPID.SetControllerDirection(PID::DIRECT);
+      ctrlDirection = PID::DIRECT;
     }      
   }
 
-  myPID.SetTunings(double(PGain), double(IGain), double(DGain));
+  myPID.SetTunings(PGain, IGain, DGain);
 
   // this will restore the user-requested PID controller mode
   stopAutoTune();
@@ -558,7 +558,7 @@ void loop()
   }  
   // update the displayed output
   // unless in manual mode, in which case a new value may have been entered
-  if (tuning || (modeIndex != MANUAL))
+  if (tuning || (modeIndex != PID::MANUAL))
     manualOutput = makeDecimal<1>(output);
 
   // after the PID has updated, check the trip limits

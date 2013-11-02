@@ -9,6 +9,7 @@
 #endif
 
 #include "ospConfig.h"
+#include "ospDecimalValue.h"
 
 // verbose debug option
 // requires open Serial port
@@ -31,14 +32,6 @@
 // otherwise have done so
 #undef AUTOTUNE_RELAY_BIAS
 
-// by default we do not want to implement dither
-// this is probably not a very useful option
-// except for highly granular, quantized process variables
-// perhaps a more generallly useful option would be to 
-// smooth using some kind of finite impulse response filter
-// for noisy or unstable inputs
-#undef AUTOTUNE_DITHER
-
 // average amplitude of successive peaks must differ by no more than this proportion
 // relative to half the difference between maximum and minimum of last 2 cycles
 #define AUTOTUNE_PEAK_AMPLITUDE_TOLERANCE 0.05
@@ -52,14 +45,6 @@
 // auto tune terminates if waiting too long between peaks or relay steps
 // set larger value for processes with long delays or time constants
 #define AUTOTUNE_MAX_WAIT_MINUTES 5
-
-#include "PID_types_local.h"
-
-enum {
-  KP_DIVISOR = 0,
-  TI_DIVISOR,
-  TD_DIVISOR
-};
 
 // Ziegler-Nichols type auto tune rules
 // in tabular form
@@ -82,14 +67,57 @@ class PID_ATune
 {
 
 public:
-  //commonly used functions ********************************************************************
+  // constants **********************************************************************************
+  
+  // auto tune methods
+  static const byte ZIEGLER_NICHOLS_PI    = 0;	
+  static const byte ZIEGLER_NICHOLS_PID   = 1;
+  static const byte TYREUS_LUYBEN_PI      = 2;
+  static const byte TYREUS_LUYBEN_PID     = 3;
+  static const byte CIANCONE_MARLIN_PI    = 4;
+  static const byte CIANCONE_MARLIN_PID   = 5;
+  static const byte PESSEN_INTEGRAL_PID   = 6;
+  static const byte SOME_OVERSHOOT_PID    = 7;
+  static const byte NO_OVERSHOOT_PID      = 8;
+  
+#if defined AUTOTUNE_AMIGOF_PI  
+  static const byte AMIGOF_PI             = 9;
+  static const byte LAST_AUTO_TUNE_METHOD = AMIGOF_PI;
+#else  
+  static const byte LAST_AUTO_TUNE_METHOD = NO_OVERSHOOT_PID;
+#endif
+
+  // peak types
+  static const byte NOT_A_PEAK = 0;
+  static const byte MINIMUM    = 1;
+  static const byte MAXIMUM    = 2;
+  
+  // auto tuner states
+  static const byte AUTOTUNER_OFF              =   0; 
+  static const byte STEADY_STATE_AT_BASELINE   =   1;
+  static const byte STEADY_STATE_AFTER_STEP_UP =   2;
+  static const byte RELAY_STEP_UP              =   4;
+  static const byte RELAY_STEP_DOWN            =   8;
+  static const byte CONVERGED                  =  16;
+  static const byte FAILED                     = 128;
+
+  // tuning rule divisor indexes
+  static const byte KP_DIVISOR = 0;
+  static const byte TI_DIVISOR = 1;
+  static const byte TD_DIVISOR = 2;
+  
+  // irrational constants
+  static const double CONST_PI          = 3.14159265358979323846;
+  static const double CONST_SQRT2_DIV_2 = 0.70710678118654752440;
+
+  // commonly used methods **********************************************************************
   PID_ATune(double*, double*);          // * Constructor.  links the Autotune to a given PID
   bool Runtime();                       // * Similar to the PID Compute function, 
                                         //   returns true when done, otherwise returns false
   void Cancel();                        // * Stops the AutoTune 
 
-  void SetOutputStep(double);           // * how far above and below the starting value will 
-                                        //   the output step?   
+  void SetOutputStep(                   // * how far above and below the starting value will
+      ospDecimalValue<1>);              //   the output step?   
   double GetOutputStep();               // 
 
   void SetControlType(byte);            // * Determines tuning algorithm
@@ -98,14 +126,9 @@ public:
   void SetLookbackSec(int);             // * how far back are we looking to identify peaks
   int GetLookbackSec();                 //
 
-  void SetNoiseBand(double);            // * the autotune will ignore signal chatter smaller 
-                                        //   than this value
+  void SetNoiseBand(                    // * the autotune will ignore signal chatter smaller 
+      ospDecimalValue<1>);              //   than this value
   double GetNoiseBand();                //   this should be accurately set
-
-#if defined DITHER
-  void SetDither( double );             // * noise added to input to smooth quantization errors
-  double GetDither();                   //   set to smallest step value in input range
-#endif
 
   double GetKp();                       // * once autotune is complete, these functions contain the
   double GetKi();                       //   computed tuning parameters.  
@@ -124,10 +147,10 @@ private:
   byte nLookBack;
   byte controlType;                     // * selects autotune algorithm
 
-  enum AutoTunerState state;            // * state of autotuner finite state machine
+  byte state;                           // * state of autotuner finite state machine
   unsigned long lastTime;
   unsigned long sampleTime;
-  enum Peak peakType;
+  byte peakType;
   unsigned long lastPeakTime[5];        // * peak time, most recent in array element 0
   double lastPeaks[5];                  // * peak value, most recent in array element 0
   byte peakCount;
@@ -151,10 +174,6 @@ private:
   double sumInputSinceLastStep[5];      // * integrated process values, most recent in array element 0
   byte stepCount;
 #endif  
-
-#if defined DITHER
-  double dither;
-#endif
 };
 
 #endif

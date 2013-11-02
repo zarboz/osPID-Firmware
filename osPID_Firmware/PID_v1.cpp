@@ -18,7 +18,7 @@
 * reliable defaults, so we need to have the user set them.
 ***************************************************************************/
 PID::PID(double* Input, double* Output, double* Setpoint,
-        double Kp, double Ki, double Kd, int ControllerDirection)
+        ospDecimalValue<3> Kp, ospDecimalValue<3> Ki, ospDecimalValue<3> Kd, int ControllerDirection)
 {
   // default output limit corresponds to
   // the arduino pwm limits
@@ -72,9 +72,9 @@ void PID::Compute()
   }
 }
 
-/* Limit()
- *  Applies outMin and outMax limits to the supplied variable
- */
+/* Limit(...)*****************************************************************
+*  Applies outMin and outMax limits to the supplied variable
+******************************************************************************/
 void PID::Limit(double *var)
 {
   if (*var > outMax) 
@@ -92,9 +92,13 @@ void PID::Limit(double *var)
 * it's called automatically from the constructor, but tunings can also
 * be adjusted on the fly during normal operation
 ******************************************************************************/
-void PID::SetTunings(double Kp, double Ki, double Kd)
+void PID::SetTunings(ospDecimalValue<3> Kp, ospDecimalValue<3> Ki, ospDecimalValue<3> Kd)
 {
-  if ((Kp < 0.0) || (Ki < 0.0) || (Kd < 0.0)) 
+  if (
+    (Kp < (ospDecimalValue<3>){0.0}) || 
+    (Ki < (ospDecimalValue<3>){0.0}) || 
+    (Kd < (ospDecimalValue<3>){0.0}) 
+  )
   {
     return;
   }
@@ -104,9 +108,9 @@ void PID::SetTunings(double Kp, double Ki, double Kd)
   dispKd = Kd;
    
   double SampleTimeInSec = SampleTime * 0.001;
-  kp = Kp;
-  ki = Ki * SampleTimeInSec;
-  kd = Kd / SampleTimeInSec;
+  kp = double(Kp);
+  ki = double(Ki) * SampleTimeInSec;
+  kd = double(Kd) / SampleTimeInSec;
  
   if (controllerDirection == REVERSE)
   {
@@ -203,9 +207,9 @@ void PID::SetControllerDirection(byte Direction)
 * functions query the internal state of the PID. they're here for display
 * purposes. this are the functions the PID Front-end uses for example
 ******************************************************************************/
-double PID::GetKp(){ return dispKp; }
-double PID::GetKi(){ return dispKi;}
-double PID::GetKd(){ return dispKd;}
+ospDecimalValue<3> PID::GetKp(){ return dispKp; }
+ospDecimalValue<3> PID::GetKi(){ return dispKi;}
+ospDecimalValue<3> PID::GetKd(){ return dispKd;}
 byte PID::GetMode(){ return inAuto ? AUTOMATIC : MANUAL;}
 byte PID::GetDirection(){ return controllerDirection;}
 

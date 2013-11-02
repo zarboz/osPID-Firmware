@@ -16,7 +16,7 @@
 // as reported on http://www.mstarlabs.com/control/znrule.html
 
 // order must be match enumerated type for auto tune methods
-PROGMEM Tuning tuningRule[NO_OVERSHOOT_PID + 1] =
+PROGMEM Tuning tuningRule[PID_ATune::NO_OVERSHOOT_PID + 1] =
 {  
   {  44, 24,   0 },  // ZIEGLER_NICHOLS_PI
   {  34, 40, 160 },  // ZIEGLER_NICHOLS_PID
@@ -35,28 +35,23 @@ PID_ATune::PID_ATune(double* Input, double* Output)
   output = Output;
 
   // constructor defaults
-  controlType = ZIEGLER_NICHOLS_PI;
+  controlType = PID_ATune::ZIEGLER_NICHOLS_PI;
   noiseBand = 0.5;
-  state = AUTOTUNER_OFF;
+  state = PID_ATune::AUTOTUNER_OFF;
   oStep = 10;
   SetLookbackSec(10);
-
-#if defined AUTOTUNE_DITHER
-  dither = 0.0;
-#endif
-
 }
 
 void PID_ATune::Cancel()
 {
-  state = AUTOTUNER_OFF;
+  state = PID_ATune::AUTOTUNER_OFF;
 }
 
 #if defined AUTOTUNE_AMIGOF_PI
 double inline PID_ATune::fastArcTan(double x)
 {
   // source: “Efficient approximations for the arctangent function”, Rajan, S. Sichun Wang Inkol, R. Joyal, A., May 2006
-  //return CONST_PI / 4.0 * x - x * (abs(x) - 1.0) * (0.2447 + 0.0663 * abs(x));
+  //return PID_ATune::CONST_PI / 4.0 * x - x * (abs(x) - 1.0) * (0.2447 + 0.0663 * abs(x));
   
   // source: "Understanding Digital Signal Processing", 2nd Ed, Richard G. Lyons, eq. 13-107
   return x / (1.0 + 0.28125 * pow(x, 2));
@@ -69,12 +64,12 @@ double PID_ATune::CalculatePhaseLag(double inducedAmplitude)
   double ratio = 2.0 * noiseBand / inducedAmplitude;
   if (ratio > 1.0)
   {
-    return CONST_PI / 2.0;
+    return PID_ATune::CONST_PI / 2.0;
   }
   else
   {
     //return CONST_PI - asin(ratio);
-    return CONST_PI - fastArcTan(ratio / sqrt( 1.0 - pow(ratio, 2)));
+    return PID_ATune::CONST_PI - fastArcTan(ratio / sqrt( 1.0 - pow(ratio, 2)));
   }
 }
 #endif // if defined AUTOTUNE_AMIGOF_PI
@@ -84,10 +79,10 @@ bool PID_ATune::Runtime()
   // check ready for new input
   unsigned long now = millis();
 
-  if (state == AUTOTUNER_OFF)
+  if (state == PID_ATune::AUTOTUNER_OFF)
   { 
     // initialize working variables the first time around
-    peakType = NOT_A_PEAK;
+    peakType = PID_ATune::NOT_A_PEAK;
     inputCount = 0;
     peakCount = 0;
     setpoint = *input;
@@ -109,16 +104,16 @@ bool PID_ATune::Runtime()
     // move to new state
 
 #if defined AUTOTUNE_AMIGOF_PI    
-    if (controlType == AMIGOF_PI)
+    if (controlType == PID_ATune::AMIGOF_PI)
     {
-      state = STEADY_STATE_AT_BASELINE;
+      state = PID_ATune::STEADY_STATE_AT_BASELINE;
     }
     else
     {
-      state = RELAY_STEP_UP;
+      state = PID_ATune::RELAY_STEP_UP;
     }
 #else
-    state = RELAY_STEP_UP;
+    state = PID_ATune::RELAY_STEP_UP;
 #endif
 
   }
@@ -133,16 +128,6 @@ bool PID_ATune::Runtime()
   lastTime = now;
   double refVal = *input;
 
-#if defined AUTOTUNE_DITHER
-  // dither input value to smooth quantization error
-  if (dither > 0.0)
-  {
-    // add random noise from triangular probability density function 
-    // centred on 0 and with range (-dither, dither)
-    refVal += ( random(-dither, dither) + random(-dither, dither) ) * 0.5;
-  }
-#endif
-
 #if defined AUTOTUNE_RELAY_BIAS 
   // used to calculate relay bias
   sumInputSinceLastStep[0] += refVal;
@@ -152,14 +137,14 @@ bool PID_ATune::Runtime()
   bool justChanged = false; 
 
   // check input and change relay state if necessary
-  if ((state == RELAY_STEP_UP) && (refVal > setpoint + noiseBand))
+  if ((state == PID_ATune::RELAY_STEP_UP) && (refVal > setpoint + noiseBand))
   {
-    state = RELAY_STEP_DOWN;
+    state = PID_ATune::RELAY_STEP_DOWN;
     justChanged = true;
   }
-  else if ((state == RELAY_STEP_DOWN) && (refVal < setpoint - noiseBand))
+  else if ((state == PID_ATune::RELAY_STEP_DOWN) && (refVal < setpoint - noiseBand))
   {
-    state = RELAY_STEP_UP;
+    state = PID_ATune::RELAY_STEP_UP;
     justChanged = true;
   }
   if (justChanged)
@@ -200,7 +185,7 @@ bool PID_ATune::Runtime()
             deltaRelayBias = -deltaRelayBias;
           }
           
-          if (abs(deltaRelayBias) > oStep * AUTOTUNE_STEP_ASYMMETRY_TOLERANCE)
+          if (abs(deltaRelayBias) > oStep * PID_ATAUTOTUNE_STEP_ASYMMETRY_TOLERANCE)
           {
             // change is large enough to bother with
             relayBias += deltaRelayBias;
@@ -259,7 +244,7 @@ bool PID_ATune::Runtime()
 #endif    
 
   }
-  else if (state == RELAY_STEP_DOWN)
+  else if (state == PID_ATune::RELAY_STEP_DOWN)
   {
     
 #if defined AUTOTUNE_RELAY_BIAS    
@@ -315,7 +300,7 @@ bool PID_ATune::Runtime()
   // step change to calculate process gain K_process
   // this may be very slow for lag-dominated processes
   // and may never terminate for integrating processes 
-  if (((byte) state & (STEADY_STATE_AT_BASELINE | STEADY_STATE_AFTER_STEP_UP)) > 0)
+  if (((byte) state & (PID_ATune::STEADY_STATE_AT_BASELINE | PID_ATune::STEADY_STATE_AFTER_STEP_UP)) > 0)
   {
     // check that all the recent inputs are 
     // equal give or take expected noise
@@ -349,27 +334,22 @@ bool PID_ATune::Runtime()
 #endif 
 
     // if recent inputs are stable
-    
-#if defined AUTOTUNE_DITHER
-    if ((iMax - iMin) <= 2.0 * (noiseBand + dither))
-#else
     if ((iMax - iMin) <= 2.0 * noiseBand)
-#endif
-
     {
       
 #if defined AUTOTUNE_RELAY_BIAS      
       lastStepTime[0] = now;
 #endif
 
-      if (state == STEADY_STATE_AT_BASELINE)
+      if (state == PID_ATune::STEADY_STATE_AT_BASELINE)
       {
-        state = STEADY_STATE_AFTER_STEP_UP;
+        state = PID_ATune::STEADY_STATE_AFTER_STEP_UP;
         lastPeaks[0] = avgInput;  
         inputCount = 0;
         return false;
       }
-      // else state == STEADY_STATE_AFTER_STEP_UP
+      // else state == PID_ATune::STEADY_STATE_AFTER_STEP_UP
+      
       // calculate process gain
       K_process = (avgInput - lastPeaks[0]) / oStep;
 
@@ -381,10 +361,10 @@ bool PID_ATune::Runtime()
       // bad estimate of process gain
       if (K_process < 1e-10) // zero
       {
-        state = AUTOTUNER_OFF;
+        state = PID_ATune::AUTOTUNER_OFF;
         return false;
       }
-      state = RELAY_STEP_DOWN;
+      state = PID_ATune::RELAY_STEP_DOWN;
 
 #if defined AUTOTUNE_RELAY_BIAS      
       sumInputSinceLastStep[0] = 0.0;
@@ -405,15 +385,15 @@ bool PID_ATune::Runtime()
   justChanged = false;
   if (isMax)
   {
-    if (peakType == MINIMUM)
+    if (peakType == PID_ATune::MINIMUM)
     {
       justChanged = true;
     }
-    peakType = MAXIMUM;
+    peakType = PID_ATune::MAXIMUM;
   }
   else if (isMin)
   {
-    if (peakType == MAXIMUM)
+    if (peakType == PID_ATune::MAXIMUM)
     {
       justChanged = true;
     }
@@ -537,7 +517,7 @@ bool PID_ATune::Runtime()
         // aiming for 135° = 0.75 * pi (radians)
         // sin(135°) = sqrt(2)/2
         // NB noiseBand = 0.5 * hysteresis
-        newNoiseBand = 0.5 * inducedAmplitude * CONST_SQRT2_DIV_2;
+        newNoiseBand = 0.5 * inducedAmplitude * PID_ATune::CONST_SQRT2_DIV_2;
 
 #if defined AUTOTUNE_RELAY_BIAS
         // we could reset relay step counter because we can't rely
@@ -563,7 +543,7 @@ bool PID_ATune::Runtime()
     // check convergence criterion for amplitude of induced oscillation
     if (((0.5 * (absMax - absMin) - inducedAmplitude) / inducedAmplitude) < AUTOTUNE_PEAK_AMPLITUDE_TOLERANCE)
     {
-      state = CONVERGED;
+      state = PID_ATune::CONVERGED;
     }
   }
     
@@ -581,10 +561,10 @@ bool PID_ATune::Runtime()
     (peakCount >= 20)
   )
   {
-    state = FAILED;
+    state = PID_ATune::FAILED;
   }
   
-  if (((byte) state & (CONVERGED | FAILED)) == 0)
+  if (((byte) state & (PID_ATune::CONVERGED | PID_ATune::FAILED)) == 0)
   {
     return false;
   }
@@ -607,12 +587,6 @@ bool PID_ATune::Runtime()
   }
 
   // finish up by calculating tuning parameters
-  
-#if defined AUTOTUNE_DITHER
-  // calculate amplitude of variation in input
-  // net of dither range
-  inducedAmplitude -= dither;
-#endif
   
   // calculate ultimate gain
   double Ku = 4.0 * oStep / (inducedAmplitude * CONST_PI); 
@@ -638,7 +612,7 @@ bool PID_ATune::Runtime()
   // requires an estimate of the process gain which is implemented in this
   // routine by steady state change in process variable after step change in set point
   // It is intended to give robust tunings for both lag- and delay- dominated processes
-  if (controlType == AMIGOF_PI)
+  if (controlType == PID_ATune::AMIGOF_PI)
   {
     // calculate gain ratio
     double kappa_phi = (1.0 / Ku) / K_process;
@@ -653,7 +627,7 @@ bool PID_ATune::Runtime()
 
 #if defined AUTOTUNE_DEBUG | defined USE_SIMULATION
   Serial.print(F("phase lag "));
-  Serial.println(phaseLag / CONST_PI * 180.0);
+  Serial.println(phaseLag / PID_ATune::CONST_PI * 180.0);
 #endif
 
     // restore original value of noiseBand
@@ -670,9 +644,9 @@ bool PID_ATune::Runtime()
   }
 #endif // if defined AUTOTUNE_AMIGOF_PI    
 
-  Kp = Ku / tuningRule[controlType].divisor(KP_DIVISOR);
-  Ti = Pu / tuningRule[controlType].divisor(TI_DIVISOR);
-  Td = tuningRule[controlType].PI_controller() ? 0.0 : Pu / tuningRule[controlType].divisor(TD_DIVISOR);
+  Kp = Ku / tuningRule[controlType].divisor(PID_ATune::KP_DIVISOR);
+  Ti = Pu / tuningRule[controlType].divisor(PID_ATune::TI_DIVISOR);
+  Td = tuningRule[controlType].PI_controller() ? 0.0 : Pu / tuningRule[controlType].divisor(PID_ATune::TD_DIVISOR);
 
   // converged
   return true;
@@ -785,9 +759,9 @@ double PID_ATune::GetKd()
   return Kp * Td; 
 }
 
-void PID_ATune::SetOutputStep(double Step)
+void PID_ATune::SetOutputStep(ospDecimalValue<1> Step)
 {
-  oStep = Step;
+  oStep = double(Step);
 }
 
 double PID_ATune::GetOutputStep()
@@ -805,9 +779,9 @@ byte PID_ATune::GetControlType()
   return controlType;
 }
 
-void PID_ATune::SetNoiseBand(double band)
+void PID_ATune::SetNoiseBand(ospDecimalValue<1> band)
 {
-  noiseBand = band;
+  noiseBand = double(band);
 }
 
 double PID_ATune::GetNoiseBand()
@@ -838,12 +812,3 @@ int PID_ATune::GetLookbackSec()
   return nLookBack * sampleTime / 1000.0;
 }
 
-#if defined AUTOTUNE_DITHER
-void PID_ATune::Set(double newDither)
-{
-  if (newDither >= 0.0)
-  {
-    dither = newDither;
-  }
-}
-#endif

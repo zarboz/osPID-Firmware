@@ -629,7 +629,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     //case ITEM_SETPOINT3:
     //case ITEM_SETPOINT4: should not happen
   case ITEM_PID_MODE:
-    if (modeIndex == MANUAL)
+    if (modeIndex == PID::MANUAL)
     {
       LCDprintln(PSTR("Manual Control"));
     }
@@ -639,7 +639,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     }
     break;
   case ITEM_PID_DIRECTION:
-    if (ctrlDirection == DIRECT)
+    if (ctrlDirection == PID::DIRECT)
     {
       LCDprintln(PSTR("Direct Action"));
     }
@@ -967,7 +967,7 @@ static void updownKeyPress(bool up)
     case ITEM_PID_MODE:
       modeIndex ^= 1; //= (modeIndex == 0 ? 1 : 0);
       // use the manual output value
-      if (modeIndex == MANUAL)
+      if (modeIndex == PID::MANUAL)
       {
         setOutputToManualOutput();
       }
@@ -1032,7 +1032,7 @@ static void updownKeyPress(bool up)
 #endif    
 
   // capture any possible changes to the output value if we're in MANUAL mode
-  if ((item == ITEM_OUTPUT) && (modeIndex == MANUAL) && !tuning && !tripped)
+  if ((item == ITEM_OUTPUT) && (modeIndex == PID::MANUAL) && !tuning && !tripped)
   {
     setOutputToManualOutput();
   }

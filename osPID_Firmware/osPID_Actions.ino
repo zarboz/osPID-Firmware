@@ -8,7 +8,7 @@
 #undef BUGCHECK
 #define BUGCHECK() ospBugCheck(PSTR("PROF"), __LINE__);
 
-extern Tuning tuningRule[NO_OVERSHOOT_PID + 1];
+extern Tuning tuningRule[PID_ATune::NO_OVERSHOOT_PID + 1];
 
 // a program invariant has been violated: suspend the controller and
 // just flash a debugging message until the unit is power cycled
@@ -55,16 +55,16 @@ static void startAutoTune()
   {
     s = aTuneStep;
   }
-  aTune.SetOutputStep(double(s));
+  aTune.SetOutputStep(s);
   
   if (tuningRule[aTuneMethod].PI_controller())
   {
-    myPID.SetTunings(aTune.GetKp(), aTune.GetKi(), 0.0);
+    myPID.SetTunings(makeDecimal<3>(aTune.GetKp()), makeDecimal<3>(aTune.GetKi()), (ospDecimalValue<3>){0});
   }
  
-  myPID.SetMode(MANUAL);
+  myPID.SetMode(PID::MANUAL);
   aTune.SetControlType(aTuneMethod); 
-  aTune.SetNoiseBand(double(aTuneNoise));
+  aTune.SetNoiseBand(aTuneNoise);
   aTune.SetLookbackSec(aTuneLookBack);
   tuning = true;
 }

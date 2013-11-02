@@ -446,7 +446,7 @@ static void cmdExamineSettings()
   
   Serial.println();
 
-  if (modeIndex == AUTOMATIC)
+  if (modeIndex == PID::AUTOMATIC)
   {
     serialPrintln(F("PID mode"));
   }
@@ -455,7 +455,7 @@ static void cmdExamineSettings()
     serialPrintln(F("Manual mode"));
   }
 
-  if (ctrlDirection == DIRECT)
+  if (ctrlDirection == PID::DIRECT)
   {
     serialPrintln(F("Direct action"));
   }
@@ -1038,10 +1038,10 @@ static void processSerialCommand()
     {
       goto out_EINV;
     }
-    modeIndex = AUTOMATIC;
+    modeIndex = PID::AUTOMATIC;
     goto out_ACK; // no EEPROM writeback needed
   case 'e': // execute a profile by number
-    if (tuning || runningProfile || modeIndex != AUTOMATIC)
+    if (tuning || runningProfile || modeIndex != PID::AUTOMATIC)
     {
       goto out_EMOD;
     }
@@ -1095,7 +1095,7 @@ static void processSerialCommand()
     break;
   case 'M': // set the controller mode (PID or manual)
     modeIndex = i1;
-    if (modeIndex == MANUAL)
+    if (modeIndex == PID::MANUAL)
     {
       setOutputToManualOutput();
     }
@@ -1103,7 +1103,7 @@ static void processSerialCommand()
     break;
   case 'm': // select auto tune method
     // turn off auto tune
-    if ((i1 < 0) || (i1 > LAST_AUTO_TUNE_METHOD))
+    if ((i1 < 0) || (i1 > PID_ATune::LAST_AUTO_TUNE_METHOD))
     {
       goto out_EINV;
     }
@@ -1130,7 +1130,7 @@ static void processSerialCommand()
         goto out_EINV;
       }
 
-      if (tuning || runningProfile || modeIndex != MANUAL)
+      if (tuning || runningProfile || modeIndex != PID::MANUAL)
       {
         goto out_EMOD;
       }
@@ -1169,7 +1169,7 @@ static void processSerialCommand()
     if (tuning || runningProfile)
       goto out_EMOD;
 
-    modeIndex = AUTOMATIC;
+    modeIndex = PID::AUTOMATIC;
     activeProfileIndex = i1;
     startProfile();
     goto out_ACK; // no EEPROM writeback needed
