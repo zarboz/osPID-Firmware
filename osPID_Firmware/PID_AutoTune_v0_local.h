@@ -19,7 +19,7 @@
 
 // AMIGOf tuning rule
 // we have made space for this, yay!
-#undef AUTOTUNE_AMIGOF_PI
+  #define AUTOTUNE_AMIGOF_PI
 
 // defining this option implements relay bias
 // this is useful to adjust the relay output values
@@ -42,12 +42,12 @@ struct Tuning
   
   bool PI_controller()
   {
-    return pgm_read_byte_near(_divisor[2]) == 0;
+    return pgm_read_byte_near(&_divisor[2]) == 0;
   }
   
   double divisor(byte index)  
   {
-    return (double)pgm_read_byte_near(_divisor[index]) * 0.05;
+    return (double)pgm_read_byte_near(&_divisor[index]) * 0.05;
   }
 };
 
@@ -71,54 +71,68 @@ public:
   //
   // auto tune terminates if waiting too long between peaks or relay steps
   // set larger value for processes with long delays or time constants
-  static const byte MAX_WAIT_MINUTES = 5;
+  static const unsigned long MAX_WAIT = 5 * 60 * 1000; // 5 minutes
   
   // auto tune methods
-  static const byte ZIEGLER_NICHOLS_PI    = 0;	
-  static const byte ZIEGLER_NICHOLS_PID   = 1;
-  static const byte TYREUS_LUYBEN_PI      = 2;
-  static const byte TYREUS_LUYBEN_PID     = 3;
-  static const byte CIANCONE_MARLIN_PI    = 4;
-  static const byte CIANCONE_MARLIN_PID   = 5;
-  static const byte PESSEN_INTEGRAL_PID   = 6;
-  static const byte SOME_OVERSHOOT_PID    = 7;
-  static const byte NO_OVERSHOOT_PID      = 8;
+  enum
+  {
+    ZIEGLER_NICHOLS_PI    = 0,
+    ZIEGLER_NICHOLS_PID,
+    TYREUS_LUYBEN_PI,
+    TYREUS_LUYBEN_PID,
+    CIANCONE_MARLIN_PI,
+    CIANCONE_MARLIN_PID,
+    PESSEN_INTEGRAL_PID,
+    SOME_OVERSHOOT_PID,
+    NO_OVERSHOOT_PID,
   
 #if defined AUTOTUNE_AMIGOF_PI  
-  static const byte AMIGOF_PI             = 9;
-  static const byte LAST_AUTO_TUNE_METHOD = AMIGOF_PI;
+    AMIGOF_PI,
+    LAST_AUTO_TUNE_METHOD = AMIGOF_PI
 #else  
-  static const byte LAST_AUTO_TUNE_METHOD = NO_OVERSHOOT_PID;
+    LAST_AUTO_TUNE_METHOD = NO_OVERSHOOT_PID
 #endif
 
+  };
+
   // peak types
-  static const byte NOT_A_PEAK = 0;
-  static const byte MINIMUM    = 1;
-  static const byte MAXIMUM    = 2;
+  enum
+  {
+    NOT_A_PEAK,
+    MINIMUM,
+    MAXIMUM  
+  };
   
   // auto tuner states
-  static const byte AUTOTUNER_OFF              =   0; 
-  static const byte STEADY_STATE_AT_BASELINE   =   1;
-  static const byte STEADY_STATE_AFTER_STEP_UP =   2;
-  static const byte RELAY_STEP_UP              =   4;
-  static const byte RELAY_STEP_DOWN            =   8;
-  static const byte CONVERGED                  =  16;
-  static const byte FAILED                     = 128;
+  enum
+  {
+    AUTOTUNER_OFF              =   0, 
+    STEADY_STATE_AT_BASELINE   =   1,
+    STEADY_STATE_AFTER_STEP_UP =   2,
+    RELAY_STEP_UP              =   4,
+    RELAY_STEP_DOWN            =   8,
+    CONVERGED                  =  16,
+    FAILED                     = 128
+  };
 
   // tuning rule divisor indexes
-  static const byte KP_DIVISOR = 0;
-  static const byte TI_DIVISOR = 1;
-  static const byte TD_DIVISOR = 2;
+  enum
+  {
+    KP_DIVISOR = 0,
+    TI_DIVISOR,
+    TD_DIVISOR 
+  };
   
   // irrational constants
   static const double CONST_PI          = 3.14159265358979323846;
+  static const double CONST_PI_DIV_2    = 1.57079632679489661923;
   static const double CONST_SQRT2_DIV_2 = 0.70710678118654752440;
   
   // default auto tune algorithm and parameters
-  static const byte   DEFAULT_METHOD                = TYREUS_LUYBEN_PID;	
-  static const int    DEFAULT_OUTPUT_STEP           = 200;
-  static const double DEFAULT_NOISE_BAND_CELSIUS    = 0.5;
-  static const int    DEFAULT_LOOKBACK_SEC          = 10;
+  static const byte   DEFAULT_METHOD             = ZIEGLER_NICHOLS_PID;	
+  static const int    DEFAULT_OUTPUT_STEP        = 100;
+  static const double DEFAULT_NOISE_BAND_CELSIUS = 0.5;
+  static const int    DEFAULT_LOOKBACK_SEC       = 10;
 
   // commonly used methods **********************************************************************
   PID_ATune(double*, double*);          // * Constructor.  links the Autotune to a given PID
@@ -145,8 +159,9 @@ public:
   double GetKd();                       //
 
 private:
-  double processValueOffset();          // * returns an estimate of the process value offset
-                                        //   as a proportion of the amplitude                                        
+  double processValueOffset(double,     // * returns an estimate of the process value offset
+     double);                           //   as a proportion of the amplitude 
+                                                                               
 
   double *input;
   double *output;
@@ -164,14 +179,16 @@ private:
   unsigned long lastPeakTime[5];        // * peak time, most recent in array element 0
   double lastPeaks[5];                  // * peak value, most recent in array element 0
   byte peakCount;
-  double lastInputs[81];                // * process values, most recent in array element 0
+  double inputOffset;
+  ospDecimalValue<3> inputOffsetChange;
+  ospDecimalValue<3> lastInputs[101];   // * process values, most recent in array element 0
   byte inputCount;
   double outputStart;
   double inducedAmplitude;
   double Kp, Ti, Td;
 
 #if defined AUTOTUNE_AMIGOF_PI  
-  double CalculatePhaseLag(double);     // * calculate phase lag from noiseBand and inducedAmplitude
+  double calculatePhaseLag(double);     // * calculate phase lag from noiseBand and inducedAmplitude
   double fastArcTan(double);
   double originalNoiseBand;
   double newNoiseBand;

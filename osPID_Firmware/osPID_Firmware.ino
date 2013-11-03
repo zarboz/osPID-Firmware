@@ -111,13 +111,12 @@ byte currentProfileStep;
 boolean runningProfile = false;
 
 // the gain coefficients of the PID controller
-ospDecimalValue<3> PGain = { 1000 }, IGain = { 0 }, DGain = { 0 };
+ospDecimalValue<3> PGain = { 1600 }, IGain = { 200 }, DGain = { 0 };
 
 // the direction flag for the PID controller
 byte ctrlDirection = PID::DIRECT;
 
-// whether the controller is executing a PID law or just outputting a manual
-// value
+// sets manual or PID control
 byte modeIndex = PID::MANUAL;
 
 // the 4 setpoints we can easily switch between
@@ -165,16 +164,18 @@ byte powerOnBehavior = DEFAULT_POWER_ON_BEHAVIOR;
 bool controllerIsBooting = true;
 
 // auto tune algorithm
-byte aTuneMethod = PID_ATune::DEFAULT_METHOD;
+byte aTuneMethod = 1;//PID_ATune::DEFAULT_METHOD;
 
 // the parameters for the autotuner
-ospDecimalValue<1> aTuneStep  = makeDecimal<1>(PID_ATune::DEFAULT_OUTPUT_STEP);
+ospDecimalValue<1> aTuneStep  = (ospDecimalValue<1>){PID_ATune::DEFAULT_OUTPUT_STEP};
+int aTuneLookBack = PID_ATune::DEFAULT_LOOKBACK_SEC;
+
 #if !defined UNITS_FAHRENHEIT
 ospDecimalValue<1> aTuneNoise = makeDecimal<1>(PID_ATune::DEFAULT_NOISE_BAND_CELSIUS * 1.8); 
 #else 
 ospDecimalValue<1> aTuneNoise = makeDecimal<1>(PID_ATune::DEFAULT_NOISE_BAND_CELSIUS);
 #endif
-int aTuneLookBack = PID_ATune::DEFAULT_LOOKBACK_SEC; 
+
 PID_ATune aTune(&lastGoodInput, &output);
 
 // whether the autotuner is active

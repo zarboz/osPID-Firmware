@@ -55,7 +55,11 @@ enum
   ITEM_PROFILE_MENU,
   ITEM_SETPOINT_MENU,
   ITEM_TRIP_MENU,
+  
+#if !defined USE_SIMULATOR
   ITEM_INPUT_MENU,
+#endif
+
   ITEM_POWERON_MENU,
   ITEM_RESET_ROM_MENU,
 
@@ -141,7 +145,11 @@ PROGMEM const MenuItem menuData[MENU_COUNT + 1] =
   { sizeof(profileMenuItems),  0,                    profileMenuItems    } ,
   { sizeof(setpointMenuItems), MENU_FLAG_2x2_FORMAT, setpointMenuItems   } ,
   { sizeof(tripMenuItems),     0,                    tripMenuItems       } ,
+  
+#if !defined USE_SIMULATOR
   { sizeof(inputMenuItems),    0,                    inputMenuItems      } ,
+#endif
+
   { sizeof(poweronMenuItems),  0,                    poweronMenuItems    } ,
   { sizeof(resetRomMenuItems), 0,                    resetRomMenuItems   } 
 };
@@ -269,7 +277,7 @@ struct MenuStateData
 {
   byte currentMenu;
   byte firstItemMenuIndex;
-  byte highlightedItemMenuIndex;
+  byte highlightedItemMenuIndex;  
   byte editDepth;
   unsigned long editStartMillis;
   bool editing;
@@ -587,7 +595,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     LCDprintln(PSTR("Dashboard"));
     break;
   case ITEM_TUNING_MENU:
-    LCDprintln(PSTR("Tunings"));
+    LCDprintln(PSTR("Tuning"));
     break;
   case ITEM_CONFIG_MENU:
     LCDprintln(PSTR("Config"));
@@ -609,9 +617,13 @@ static void drawFullRowItem(byte row, bool selected, byte item)
   case ITEM_TRIP_MENU:
     LCDprintln(PSTR("Alarm"));
     break;
+ 
+#if !defined USE_SIMULATOR
   case ITEM_INPUT_MENU:
     LCDprintln(PSTR("Sensor"));
     break;
+#endif
+    
   case ITEM_RESET_ROM_MENU:
     LCDprintln(PSTR("Reset Memory"));
     break;
@@ -751,9 +763,9 @@ static void drawStatusFlash()
 
 void drawMenu()
 {
-  byte itemCount = menuData[menuState.currentMenu].itemCount();
-
-  if (menuData[menuState.currentMenu].is2x2())
+  byte menu = menuState.currentMenu;
+  byte itemCount = menuData[menu].itemCount();
+  if (menuData[menu].is2x2())
   {
     // NOTE: right now the code only supports one screen (<= 4 items) in
     // 2x2 menu mode
@@ -765,22 +777,22 @@ void drawMenu()
     for (byte i = 0; i < itemCount; i++) 
     {
       bool highlight = (i == menuState.highlightedItemMenuIndex);
-      byte item = menuData[menuState.currentMenu].itemAt(i);
-
+      byte item = menuData[menu].itemAt(i);
       drawHalfRowItem(i / 2, 5 * (i & 1), highlight, item);
     }
   }
   else
   {
     // 2x1 format; supports an arbitrary number of items in the menu
-    bool highlightFirst = (menuState.highlightedItemMenuIndex == menuState.firstItemMenuIndex);
+    byte first = menuState.firstItemMenuIndex;
+    bool highlightFirst = (menuState.highlightedItemMenuIndex == first);
     
 #if !defined ATMEGA_32kB_FLASH
-    ospAssert(menuState.firstItemMenuIndex + 1 < itemCount);
+    ospAssert(first + 1 < itemCount);
 #endif
 
-    drawFullRowItem(0, highlightFirst, menuData[menuState.currentMenu].itemAt(menuState.firstItemMenuIndex));
-    drawFullRowItem(1, !highlightFirst, menuData[menuState.currentMenu].itemAt(menuState.firstItemMenuIndex+1));
+    drawFullRowItem(0,  highlightFirst, menuData[menu].itemAt(first));
+    drawFullRowItem(1, !highlightFirst, menuData[menu].itemAt(first + 1));
   }
 
   // certain ongoing states flash a notification in the cursor slot
@@ -793,6 +805,7 @@ void drawMenu()
 // if icon is '\0', then just set the cursor at the editable location
 void __attribute__ ((noinline)) drawNotificationCursor(char icon)
 {
+  byte highlightedIndex = menuState.highlightedItemMenuIndex;
   byte row, col;
   if (menuData[menuState.currentMenu].is2x2())
   {
@@ -806,12 +819,12 @@ void __attribute__ ((noinline)) drawNotificationCursor(char icon)
       return;
     }
 
-    row = menuState.highlightedItemMenuIndex / 2;
-    col = 5 * (menuState.highlightedItemMenuIndex & 1);
+    row = highlightedIndex / 2;
+    col = 5 * (highlightedIndex & 1);
   }
   else
   {
-    row = (menuState.highlightedItemMenuIndex == menuState.firstItemMenuIndex) ? 0 : 1;
+    row = (highlightedIndex == menuState.firstItemMenuIndex) ? 0 : 1;
     col = 0;
   }
 
@@ -829,11 +842,12 @@ void __attribute__ ((noinline)) drawNotificationCursor(char icon)
 
 void backKeyPress()
 {
+  byte menu = menuState.currentMenu;
   if (menuState.editing)
   {
     // step the cursor one place to the left and stop editing if required
     menuState.editDepth--;
-    byte item = menuData[menuState.currentMenu].itemAt(menuState.highlightedItemMenuIndex);
+    byte item = menuData[menu].itemAt(menuState.highlightedItemMenuIndex);
     if (item < FIRST_ACTION_ITEM)
     {
       // floating-point items have a decimal point, which we want to jump over
@@ -852,7 +866,7 @@ void backKeyPress()
   }
 
   // go up a level in the menu hierarchy
-  byte prevMenu = menuState.currentMenu;
+  byte prevMenu = menu;
   switch (prevMenu)
   {
   case ITEM_MAIN_MENU:
@@ -875,11 +889,15 @@ void backKeyPress()
     menuState.highlightedItemMenuIndex = 4;
     menuState.firstItemMenuIndex = 3;
     break;
+    
+#if !defined USE_SIMULATOR
   case ITEM_INPUT_MENU:
     menuState.currentMenu = ITEM_CONFIG_MENU;
     menuState.highlightedItemMenuIndex = 0;
     menuState.firstItemMenuIndex = 0;
     break;
+#endif 
+
   case ITEM_POWERON_MENU:
   case ITEM_RESET_ROM_MENU:
     menuState.currentMenu = ITEM_CONFIG_MENU;
@@ -906,6 +924,7 @@ void backKeyPress()
 
 void updownKeyPress(bool up)
 {
+  byte menu = menuState.currentMenu;
   if (!menuState.editing)
   {
     // menu navigation
@@ -915,7 +934,7 @@ void updownKeyPress(bool up)
       {
         return;
       }
-      if (menuData[menuState.currentMenu].is2x2())
+      if (menuData[menu].is2x2())
       {
         menuState.highlightedItemMenuIndex--;
         return;
@@ -929,13 +948,13 @@ void updownKeyPress(bool up)
     }
 
     // down
-    byte menuItemCount = menuData[menuState.currentMenu].itemCount();
+    byte menuItemCount = menuData[menu].itemCount();
     if (menuState.highlightedItemMenuIndex == menuItemCount - 1)
     {
       return;
     }
     menuState.highlightedItemMenuIndex++;
-    if (menuData[menuState.currentMenu].is2x2())
+    if (menuData[menu].is2x2())
     {
       return;
     }
@@ -947,7 +966,7 @@ void updownKeyPress(bool up)
   }
 
   // editing a number or a setting
-  byte item = menuData[menuState.currentMenu].itemAt(menuState.highlightedItemMenuIndex);
+  byte item = menuData[menu].itemAt(menuState.highlightedItemMenuIndex);
 
   if (!canEditItem(item))
   {
@@ -1013,6 +1032,7 @@ void updownKeyPress(bool up)
   // capture changes
   if (item == ITEM_SETPOINT)
   {
+    setPoints[setPointIndex] = displaySetpoint;
     updateActiveSetPoint();
   }
   
@@ -1086,9 +1106,13 @@ void okKeyPress()
     case ITEM_SETPOINT_MENU:
       menuState.highlightedItemMenuIndex = setPointIndex;
       break;
+      
+#if !defined USE_SIMULATOR
     case ITEM_INPUT_MENU:
       menuState.highlightedItemMenuIndex = theInputDevice.ioType;
       break;
+#endif
+
     case ITEM_POWERON_MENU:
       menuState.highlightedItemMenuIndex = powerOnBehavior;
       break;

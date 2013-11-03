@@ -153,7 +153,7 @@ union SettingsByte2
     byte activeProfileIndex : 2;
     byte inputType : 2;
     byte unitsFahrenheit : 1;
-    // unused: 3
+    byte unused: 3;
   };
   byte byteVal;
 };
@@ -175,7 +175,7 @@ void saveEEPROMSettings()
 
   sb2.byteVal = 0;
   sb2.activeProfileIndex = activeProfileIndex;
-  sb2.inputType = (byte) theInputDevice.ioType;
+  sb2.inputType = theInputDevice.ioType;
   sb2.unitsFahrenheit = unitsFahrenheit;
   settings.save(sb2.byteVal);
 
@@ -219,6 +219,14 @@ static void restoreEEPROMSettings()
   SettingsByte2 sb2;
   ospSettingsHelper settings(CRC16_INIT, SETTINGS_SBYTE1_OFFSET);
 
+  settings.restore(sb1.byteVal);
+  modeIndex = sb1.pidMode;
+  ctrlDirection = sb1.pidDirection;
+  powerOnBehavior = sb1.powerOnBehavior;
+  setPointIndex = sb1.setPointIndex;
+  tripLimitsEnabled = sb1.tripLimitsEnabled;
+  tripAutoReset = sb1.tripAutoReset;
+
   // clear EEPROM if units have changed
   settings.restore(sb2.byteVal);
   
@@ -235,15 +243,7 @@ static void restoreEEPROMSettings()
   */
 
   activeProfileIndex = sb2.activeProfileIndex;
-  theInputDevice.ioType = (byte) sb2.inputType;
-
-  settings.restore(sb1.byteVal);
-  modeIndex = sb1.pidMode;
-  ctrlDirection = sb1.pidDirection;
-  powerOnBehavior = sb1.powerOnBehavior;
-  setPointIndex = sb1.setPointIndex;
-  tripLimitsEnabled = sb1.tripLimitsEnabled;
-  tripAutoReset = sb1.tripAutoReset;
+  theInputDevice.ioType = sb2.inputType;
 
   settings.restore(PGain);
   settings.restore(IGain);

@@ -78,14 +78,14 @@ const bool unitsFahrenheit = false;
 #endif
 
 // use simulator for input/output
-#undef USE_SIMULATOR
+#define USE_SIMULATOR
 
 // omit serial processing commands for standalone controller
 // setting this option will compile a hex file several kB shorter
-#define STANDALONE_CONTROLLER
+#undef STANDALONE_CONTROLLER
 
 // necessary omissions to compil on Atmega microcontrollers with 32 kB flash
-#undef ATMEGA_32kB_FLASH
+#define ATMEGA_32kB_FLASH
 
 // NB test compilation length using longest options: #undef STANDALONE_CONTROLLER, USE_SIMULATOR, SILENCE_BUZZER, and #define UNITS_FAHRENHEIT
 
