@@ -50,8 +50,9 @@ enum
   // all menus must be first
   ITEM_MAIN_MENU = 0,
   ITEM_DASHBOARD_MENU,
-  ITEM_PROFILE_MENU,
+  ITEM_TUNING_MENU,
   ITEM_CONFIG_MENU,
+  ITEM_PROFILE_MENU,
   ITEM_SETPOINT_MENU,
   ITEM_TRIP_MENU,
   ITEM_INPUT_MENU,
@@ -90,7 +91,6 @@ enum
   ITEM_INPUT_THERMISTOR,
   ITEM_INPUT_ONEWIRE,
   ITEM_INPUT_THERMOCOUPLE,
-  ITEM_INPUT_SIMULATOR,
 
   ITEM_POWERON_DISABLE,
   ITEM_POWERON_CONTINUE,
@@ -107,15 +107,14 @@ enum
   DECIMAL_ITEM_COUNT = FIRST_ACTION_ITEM - FIRST_DECIMAL_ITEM
 };
 
-PROGMEM const byte mainMenuItems[4] = { ITEM_DASHBOARD_MENU, ITEM_PROFILE_MENU, ITEM_CONFIG_MENU, ITEM_AUTOTUNE_CMD };
+PROGMEM const byte mainMenuItems[4] = { ITEM_DASHBOARD_MENU, ITEM_TUNING_MENU, ITEM_CONFIG_MENU, ITEM_PROFILE_MENU };
 PROGMEM const byte dashMenuItems[5] = { ITEM_SETPOINT, ITEM_INPUT, ITEM_OUTPUT, ITEM_PID_MODE, ITEM_TRIP_MENU };
+PROGMEM const byte tuneMenuItems[5] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_AUTOTUNE_CMD };
 
 #if !defined USE_SIMULATOR
-PROGMEM const byte configMenuItems[9] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_INPUT_MENU, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, 
-  ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU };
+PROGMEM const byte configMenuItems[5] = { ITEM_INPUT_MENU, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU };
 #else
-PROGMEM const byte configMenuItems[9] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_INPUT_MENU, 
-  ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU };
+PROGMEM const byte configMenuItems[2] = { ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU };
 #endif 
   
 PROGMEM const byte profileMenuItems[3] = { ITEM_PROFILE1, ITEM_PROFILE2, ITEM_PROFILE3 };
@@ -124,28 +123,28 @@ PROGMEM const byte setpointMenuItems[4] = { ITEM_SETPOINT1, ITEM_SETPOINT2, ITEM
 #if !defined USE_SIMULATOR
 PROGMEM const byte inputMenuItems[3] = { ITEM_INPUT_THERMISTOR, ITEM_INPUT_ONEWIRE, ITEM_INPUT_THERMOCOUPLE };
 #else
-PROGMEM const byte inputMenuItems[1] = { ITEM_INPUT_SIMULATOR };
+// only one simulation currently implemented so no need for menu
 #endif
 
-PROGMEM const byte poweronMenuItems[3] = { ITEM_POWERON_DISABLE, ITEM_POWERON_CONTINUE, ITEM_POWERON_RESUME_PROFILE };
-PROGMEM const byte tripMenuItems[4] = { ITEM_TRIP_ENABLED, ITEM_LOWER_TRIP_LIMIT, ITEM_UPPER_TRIP_LIMIT, ITEM_TRIP_AUTORESET };
+PROGMEM const byte poweronMenuItems[3]  = { ITEM_POWERON_DISABLE, ITEM_POWERON_CONTINUE, ITEM_POWERON_RESUME_PROFILE };
+PROGMEM const byte tripMenuItems[4]     = { ITEM_TRIP_ENABLED, ITEM_LOWER_TRIP_LIMIT, ITEM_UPPER_TRIP_LIMIT, ITEM_TRIP_AUTORESET };
 PROGMEM const byte resetRomMenuItems[2] = { ITEM_RESET_ROM_NO, ITEM_RESET_ROM_YES };
-PROGMEM const byte temperatureItems[4] = { ITEM_SETPOINT, ITEM_INPUT, ITEM_LOWER_TRIP_LIMIT, ITEM_UPPER_TRIP_LIMIT };
+PROGMEM const byte temperatureItems[4]  = { ITEM_SETPOINT, ITEM_INPUT, ITEM_LOWER_TRIP_LIMIT, ITEM_UPPER_TRIP_LIMIT };
 
 // This must be in the same order as the ITEM_*_MENU enumeration values
 PROGMEM const MenuItem menuData[MENU_COUNT + 1] =
 { 
   { sizeof(mainMenuItems),     0,                    mainMenuItems       } ,
   { sizeof(dashMenuItems),     0,                    dashMenuItems       } ,
-  { sizeof(profileMenuItems),  0,                    profileMenuItems    } ,
+  { sizeof(tuneMenuItems),     0,                    tuneMenuItems       } ,
   { sizeof(configMenuItems),   0,                    configMenuItems     } ,
+  { sizeof(profileMenuItems),  0,                    profileMenuItems    } ,
   { sizeof(setpointMenuItems), MENU_FLAG_2x2_FORMAT, setpointMenuItems   } ,
   { sizeof(tripMenuItems),     0,                    tripMenuItems       } ,
   { sizeof(inputMenuItems),    0,                    inputMenuItems      } ,
   { sizeof(poweronMenuItems),  0,                    poweronMenuItems    } ,
   { sizeof(resetRomMenuItems), 0,                    resetRomMenuItems   } 
 };
-
 
 /*
  * This class encapsulates the PROGMEM tables which describe how the various decimal
@@ -587,8 +586,11 @@ static void drawFullRowItem(byte row, bool selected, byte item)
   case ITEM_DASHBOARD_MENU:
     LCDprintln(PSTR("Dashboard"));
     break;
+  case ITEM_TUNING_MENU:
+    LCDprintln(PSTR("Tunings"));
+    break;
   case ITEM_CONFIG_MENU:
-    LCDprintln(PSTR("Configure"));
+    LCDprintln(PSTR("Config"));
     break;
   case ITEM_PROFILE_MENU:
     if (runningProfile)
@@ -663,10 +665,6 @@ static void drawFullRowItem(byte row, bool selected, byte item)
   case ITEM_INPUT_THERMOCOUPLE:
     LCDprintln(PSTR("Thermocouple"));
     break;  
-#else
-  case ITEM_INPUT_SIMULATOR:
-    LCDprintln(PSTR("Simulation"));
-    break;
 #endif    
 
   case ITEM_POWERON_DISABLE:
@@ -860,6 +858,7 @@ void backKeyPress()
   case ITEM_MAIN_MENU:
     break;
   case ITEM_DASHBOARD_MENU:
+  case ITEM_TUNING_MENU:
   case ITEM_CONFIG_MENU:
   case ITEM_PROFILE_MENU:
     menuState.currentMenu = ITEM_MAIN_MENU;
@@ -877,23 +876,22 @@ void backKeyPress()
     menuState.firstItemMenuIndex = 3;
     break;
   case ITEM_INPUT_MENU:
-  
-#if !defined USE_SIMULATOR
-    // skip over calibration and output cycle items
-    prevMenu -= 2;
-#endif 
-
+    menuState.currentMenu = ITEM_CONFIG_MENU;
+    menuState.highlightedItemMenuIndex = 0;
+    menuState.firstItemMenuIndex = 0;
+    break;
   case ITEM_POWERON_MENU:
   case ITEM_RESET_ROM_MENU:
     menuState.currentMenu = ITEM_CONFIG_MENU;
     
 #if !defined USE_SIMULATOR
-    menuState.highlightedItemMenuIndex = prevMenu - ITEM_INPUT_MENU + 6;
+    menuState.highlightedItemMenuIndex = prevMenu - ITEM_INPUT_MENU + 2;
+    menuState.firstItemMenuIndex = menuState.highlightedItemMenuIndex - 1;
 #else    
-    menuState.highlightedItemMenuIndex = prevMenu - ITEM_INPUT_MENU + 4;
+    menuState.highlightedItemMenuIndex = 0;
+    menuState.firstItemMenuIndex = 0;
 #endif
 
-    menuState.firstItemMenuIndex = menuState.highlightedItemMenuIndex - 1;
     break;
   default:
   
@@ -922,31 +920,25 @@ void updownKeyPress(bool up)
         menuState.highlightedItemMenuIndex--;
         return;
       }
-
       if (menuState.highlightedItemMenuIndex == menuState.firstItemMenuIndex)
       {
         menuState.firstItemMenuIndex--;
       }
-
       menuState.highlightedItemMenuIndex = menuState.firstItemMenuIndex;
       return;
     }
 
     // down
     byte menuItemCount = menuData[menuState.currentMenu].itemCount();
-
     if (menuState.highlightedItemMenuIndex == menuItemCount - 1)
     {
       return;
     }
-
     menuState.highlightedItemMenuIndex++;
-
     if (menuData[menuState.currentMenu].is2x2())
     {
       return;
     }
-
     if (menuState.highlightedItemMenuIndex != menuState.firstItemMenuIndex + 1)
     {
       menuState.firstItemMenuIndex = menuState.highlightedItemMenuIndex - 1;
@@ -1059,12 +1051,11 @@ void okKeyPress()
         menuState.editDepth++;
       }
     }
-
+    
     if ((menuState.editDepth > lastDigitPosition) || (item >= FIRST_ACTION_ITEM))
     {
       stopEditing();
     }
-
     return;
   }
 
@@ -1187,9 +1178,8 @@ void okKeyPress()
   case ITEM_INPUT_THERMOCOUPLE:
     // update inputType
     theInputDevice.ioType = (item - ITEM_INPUT_THERMISTOR);
-#else  
-  case ITEM_INPUT_SIMULATOR:
-    theInputDevice.ioType = theInputDevice.INPUT_SIMULATOR;
+#else
+    // FIXME could maybe use this menu to choose between simulations
 #endif  
 
     theInputDevice.initialize();

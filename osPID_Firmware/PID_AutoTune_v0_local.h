@@ -115,7 +115,7 @@ public:
   static const double CONST_SQRT2_DIV_2 = 0.70710678118654752440;
   
   // default auto tune algorithm and parameters
-  static const byte   DEFAULT_METHOD                = ZIEGLER_NICHOLS_PI;	
+  static const byte   DEFAULT_METHOD                = TYREUS_LUYBEN_PID;	
   static const int    DEFAULT_OUTPUT_STEP           = 200;
   static const double DEFAULT_NOISE_BAND_CELSIUS    = 0.5;
   static const int    DEFAULT_LOOKBACK_SEC          = 10;
@@ -164,7 +164,7 @@ private:
   unsigned long lastPeakTime[5];        // * peak time, most recent in array element 0
   double lastPeaks[5];                  // * peak value, most recent in array element 0
   byte peakCount;
-  double lastInputs[101];               // * process values, most recent in array element 0
+  double lastInputs[81];                // * process values, most recent in array element 0
   byte inputCount;
   double outputStart;
   double inducedAmplitude;

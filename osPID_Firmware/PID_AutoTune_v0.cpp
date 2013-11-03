@@ -18,15 +18,15 @@
 // order must be match enumerated type for auto tune methods
 PROGMEM Tuning tuningRule[PID_ATune::NO_OVERSHOOT_PID + 1] =
 {  
-  {  44, 24,   0 },  // ZIEGLER_NICHOLS_PI
-  {  34, 40, 160 },  // ZIEGLER_NICHOLS_PID
-  {  64,  9,   0 },  // TYREUS_LUYBEN_PI
-  {  44,  9, 126 },  // TYREUS_LUYBEN_PID
-  {  66, 80,   0 },  // CIANCONE_MARLIN_PI
-  {  66, 88, 162 },  // CIANCONE_MARLIN_PID
-  {  28, 50, 133 },  // PESSEN_INTEGRAL_PID
-  {  60, 40,  60 },  // SOME_OVERSHOOT_PID
-  { 100, 40,  60 }   // NO_OVERSHOOT_PID
+  { {  44, 24,   0 } },  // ZIEGLER_NICHOLS_PI
+  { {  34, 40, 160 } },  // ZIEGLER_NICHOLS_PID
+  { {  64,  9,   0 } },  // TYREUS_LUYBEN_PI
+  { {  44,  9, 126 } },  // TYREUS_LUYBEN_PID
+  { {  66, 80,   0 } },  // CIANCONE_MARLIN_PI
+  { {  66, 88, 162 } },  // CIANCONE_MARLIN_PID
+  { {  28, 50, 133 } },  // PESSEN_INTEGRAL_PID
+  { {  60, 40,  60 } },  // SOME_OVERSHOOT_PID
+  { { 100, 40,  60 } }   // NO_OVERSHOOT_PID
 };
 
 PID_ATune::PID_ATune(double* Input, double* Output)
@@ -571,8 +571,6 @@ bool PID_ATune::Runtime()
 
   // autotune algorithm has terminated 
   // reset autotuner variables
-
-  state == AUTOTUNER_OFF;
   *output = outputStart;
 
   if (state == FAILED)
@@ -795,14 +793,14 @@ void PID_ATune::SetLookbackSec(int value)
   {
     value = 1;
   }
-  if (value < 25)
+  if (value < 20)
   {
     nLookBack = value * 4;
     sampleTime = 250;
   }
   else
   {
-    nLookBack = 100;
+    nLookBack = 80;
     sampleTime = value * 10;
   }
 }

@@ -9,6 +9,7 @@
 class ospSimulator : public ospBaseInputDevice, public ospBaseOutputDevice 
 {
 private:
+  // NB size of theta[] reduced from 30 to 10 to save memory
   double kpmodel, taup, theta[10];
   double processValue;
   int    modelDelay;
