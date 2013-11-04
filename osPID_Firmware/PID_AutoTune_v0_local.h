@@ -136,27 +136,27 @@ public:
 
   // commonly used methods **********************************************************************
   PID_ATune(double*, double*);          // * Constructor.  links the Autotune to a given PID
-  bool Runtime();                       // * Similar to the PID Compute function, 
+  bool runtime();                       // * Similar to the PID Compute function, 
                                         //   returns true when done, otherwise returns false
-  void Cancel();                        // * Stops the AutoTune 
+  void cancel();                        // * Stops the AutoTune 
 
-  void SetOutputStep(                   // * how far above and below the starting value will
+  void setOutputStep(                   // * how far above and below the starting value will
       ospDecimalValue<1>);              //   the output step?   
-  double GetOutputStep();               // 
+  double getOutputStep();               // 
 
-  void SetControlType(byte);            // * Determines tuning algorithm
-  byte GetControlType();                // * Returns tuning algorithm
+  void setControlType(byte);            // * Determines tuning algorithm
+  byte getControlType();                // * Returns tuning algorithm
 
-  void SetLookbackSec(int);             // * how far back are we looking to identify peaks
-  int GetLookbackSec();                 //
+  void setLookbackSec(int);             // * how far back are we looking to identify peaks
+  int getLookbackSec();                 //
 
-  void SetNoiseBand(                    // * the autotune will ignore signal chatter smaller 
+  void setNoiseBand(                    // * the autotune will ignore signal chatter smaller 
       ospDecimalValue<1>);              //   than this value
-  double GetNoiseBand();                //   this should be accurately set
+  double getNoiseBand();                //   this should be accurately set
 
-  double GetKp();                       // * once autotune is complete, these functions contain the
-  double GetKi();                       //   computed tuning parameters.  
-  double GetKd();                       //
+  double getKp();                       // * once autotune is complete, these functions contain the
+  double getKi();                       //   computed tuning parameters.  
+  double getKd();                       //
 
 private:
   double processValueOffset(double,     // * returns an estimate of the process value offset

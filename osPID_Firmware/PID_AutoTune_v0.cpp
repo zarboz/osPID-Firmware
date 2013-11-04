@@ -36,8 +36,8 @@ PID_ATune::PID_ATune(double* Input, double* Output)
 
   // constructor defaults
   controlType = DEFAULT_METHOD;
-  SetOutputStep((ospDecimalValue<1>){DEFAULT_OUTPUT_STEP});
-  SetLookbackSec(DEFAULT_LOOKBACK_SEC);
+  setOutputStep((ospDecimalValue<1>){DEFAULT_OUTPUT_STEP});
+  setLookbackSec(DEFAULT_LOOKBACK_SEC);
   
 #if !defined UNITS_FAHRENHEIT
   noiseBand   = DEFAULT_NOISE_BAND_CELSIUS;
@@ -48,7 +48,7 @@ PID_ATune::PID_ATune(double* Input, double* Output)
   state       = AUTOTUNER_OFF;
 }
 
-void PID_ATune::Cancel()
+void PID_ATune::cancel()
 {
   state = AUTOTUNER_OFF;
 }
@@ -80,7 +80,7 @@ double PID_ATune::calculatePhaseLag(double inducedAmplitude)
 }
 #endif // if defined AUTOTUNE_AMIGOF_PI
 
-bool PID_ATune::Runtime()
+bool PID_ATune::runtime()
 {
   // check ready for new input
   unsigned long now = millis();
@@ -737,53 +737,53 @@ double PID_ATune::processValueOffset(double avgStep1, double avgStep2)
 } 
 #endif // if defined AUTOTUNE_RELAY_BIAS
 
-double PID_ATune::GetKp()
+double PID_ATune::getKp()
 {
   return Kp;
 }
 
-double PID_ATune::GetKi()
+double PID_ATune::getKi()
 {
   return Kp / Ti;
 }
 
-double PID_ATune::GetKd()
+double PID_ATune::getKd()
 {
   return Kp * Td; 
 }
 
-void PID_ATune::SetOutputStep(ospDecimalValue<1> Step)
+void PID_ATune::setOutputStep(ospDecimalValue<1> Step)
 {
   oStep = double(Step);
 }
 
-double PID_ATune::GetOutputStep()
+double PID_ATune::getOutputStep()
 {
   return oStep;
 }
 
-void PID_ATune::SetControlType(byte type) 
+void PID_ATune::setControlType(byte type) 
 {
   Serial.println(type);
   controlType = type;
 }
 
-byte PID_ATune::GetControlType()
+byte PID_ATune::getControlType()
 {
   return controlType;
 }
 
-void PID_ATune::SetNoiseBand(ospDecimalValue<1> band)
+void PID_ATune::setNoiseBand(ospDecimalValue<1> band)
 {
   noiseBand = double(band);
 }
 
-double PID_ATune::GetNoiseBand()
+double PID_ATune::getNoiseBand()
 {
   return noiseBand;
 }
 
-void PID_ATune::SetLookbackSec(int value)
+void PID_ATune::setLookbackSec(int value)
 {
   if (value < 1) 
   {
@@ -801,7 +801,7 @@ void PID_ATune::SetLookbackSec(int value)
   }
 }
 
-int PID_ATune::GetLookbackSec()
+int PID_ATune::getLookbackSec()
 {
   return nLookBack * sampleTime / 1000.0;
 }

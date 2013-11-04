@@ -367,12 +367,12 @@ static bool __attribute__ ((noinline)) canEditDecimalItem(const byte index)
   byte flags = decimalItemData[index].flags();
 
   return !(flags & DecimalItem::NO_EDIT) &&
-    !((flags & DecimalItem::EDIT_MANUAL_ONLY) && (modeIndex == 1));
+    !((flags & DecimalItem::EDIT_MANUAL_ONLY) && (myPID.getMode() == PID::AUTOMATIC));
 }
 
 static bool __attribute__ ((noinline)) canEditItem(byte item)
 {
-  bool canEdit = !tuning;
+  bool canEdit = !myPID.isTuning();
 
   if (item < FIRST_DECIMAL_ITEM)
   {
@@ -628,7 +628,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     LCDprintln(PSTR("Reset Memory"));
     break;
   case ITEM_AUTOTUNE_CMD:
-    if (tuning)
+    if (myPID.isTuning())
     {
       LCDprintln(PSTR("Cancel"));
     }
@@ -647,7 +647,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     //case ITEM_SETPOINT3:
     //case ITEM_SETPOINT4: should not happen
   case ITEM_PID_MODE:
-    if (modeIndex == PID::MANUAL)
+    if (myPID.getMode() == PID::MANUAL)
     {
       LCDprintln(PSTR("Manual Control"));
     }
@@ -657,7 +657,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     }
     break;
   case ITEM_PID_DIRECTION:
-    if (ctrlDirection == PID::DIRECT)
+    if (myPID.getDirection() == PID::DIRECT)
     {
       LCDprintln(PSTR("Direct Action"));
     }
@@ -738,7 +738,7 @@ static void drawStatusFlash()
       ch = '!';
     }
   }
-  else if (tuning && (flashState > 0))
+  else if (myPID.isTuning() && (flashState > 0))
   {
     if ((flashState & 1) > 0) 
     {
@@ -981,17 +981,15 @@ void updownKeyPress(bool up)
     switch (item)
     {
     case ITEM_PID_MODE:
-      modeIndex ^= 1; //= (modeIndex == 0 ? 1 : 0);
+      myPID.setMode(myPID.getMode() ^ 1);
       // use the manual output value
-      if (modeIndex == PID::MANUAL)
+      if (myPID.getMode() == PID::MANUAL)
       {
         setOutputToManualOutput();
       }
-      myPID.SetMode(modeIndex);
       break;
     case ITEM_PID_DIRECTION:
-      ctrlDirection ^= 1; //= (ctrlDirection == 0 ? 1 : 0);
-      myPID.SetControllerDirection(ctrlDirection);
+      myPID.setControllerDirection(myPID.getDirection() ^ 1);
       break;
     case ITEM_TRIP_ENABLED:
       tripLimitsEnabled = !tripLimitsEnabled;
@@ -1048,7 +1046,7 @@ void updownKeyPress(bool up)
 #endif    
 
   // capture any possible changes to the output value if we're in MANUAL mode
-  if ((item == ITEM_OUTPUT) && (modeIndex == PID::MANUAL) && !tuning && !tripped)
+  if ((item == ITEM_OUTPUT) && (myPID.getMode() == PID::MANUAL) && !myPID.isTuning() && !tripped)
   {
     setOutputToManualOutput();
   }
@@ -1089,7 +1087,7 @@ void okKeyPress()
       {
         stopProfile();
       }
-      else if (!tuning)
+      else if (!myPID.isTuning())
       {
         startProfile();
       }
@@ -1153,7 +1151,7 @@ void okKeyPress()
     {
       break;
     }
-    if (!tuning)
+    if (!myPID.isTuning())
     {
       startAutoTune();
     }
@@ -1167,7 +1165,7 @@ void okKeyPress()
   case ITEM_PROFILE2:
   case ITEM_PROFILE3:
     activeProfileIndex = item - ITEM_PROFILE1;
-    if (!tuning)
+    if (!myPID.isTuning())
     {
       startProfile();
     }

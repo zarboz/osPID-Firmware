@@ -113,12 +113,6 @@ boolean runningProfile = false;
 // the gain coefficients of the PID controller
 ospDecimalValue<3> PGain = { 1600 }, IGain = { 200 }, DGain = { 0 };
 
-// the direction flag for the PID controller
-byte ctrlDirection = PID::DIRECT;
-
-// sets manual or PID control
-byte modeIndex = PID::MANUAL;
-
 // the 4 setpoints we can easily switch between
 #if !defined UNITS_FAHRENHEIT
 ospDecimalValue<1> setPoints[4] = { { 250 }, { 650 }, { 1000 }, { 1250 } };
@@ -177,9 +171,6 @@ ospDecimalValue<1> aTuneNoise = makeDecimal<1>(PID_ATune::DEFAULT_NOISE_BAND_CEL
 #endif
 
 PID_ATune aTune(&lastGoodInput, &output);
-
-// whether the autotuner is active
-bool tuning = false;
 
 // the actual PID controller
 PID myPID(&lastGoodInput, &output, &activeSetPoint, PGain, IGain, DGain, PID::DIRECT);
@@ -341,17 +332,15 @@ void setup()
 
   // configure the PID loop 
   updateActiveSetPoint();
-  myPID.SetSampleTime(PID::LOOP_SAMPLE_TIME);
-  myPID.SetOutputLimits(0, 100);
-  myPID.SetTunings(PGain, IGain, DGain);
-  myPID.SetControllerDirection(ctrlDirection);
+  myPID.setSampleTime(PID::LOOP_SAMPLE_TIME);
+  myPID.setOutputLimits(0, 100);
+  myPID.setTunings(PGain, IGain, DGain);
 
   if (powerOnBehavior == POWERON_DISABLE) 
   {
-    modeIndex = PID::MANUAL;
+    myPID.setMode(PID::MANUAL);
     setOutputToManualOutput();
   }
-  myPID.SetMode(modeIndex);
 
   // finally, check whether we were interrupted in the middle of a profile
   if (profileWasInterrupted())
@@ -505,14 +494,14 @@ static void checkButtons()
 static void completeAutoTune()
 {
   // We're done, set the tuning parameters
-  PGain = makeDecimal<3>(aTune.GetKp());
-  IGain = makeDecimal<3>(aTune.GetKi());
-  DGain = makeDecimal<3>(aTune.GetKd());
+  PGain = makeDecimal<3>(aTune.getKp());
+  IGain = makeDecimal<3>(aTune.getKi());
+  DGain = makeDecimal<3>(aTune.getKd());
 
   // set the PID controller to accept the new gain settings
   // use whatever direction of control is currently set
   //myPID.SetControllerDirection(PID::DIRECT);
-  myPID.SetMode(PID::AUTOMATIC);
+  myPID.setMode(PID::AUTOMATIC);
 
   if (PGain < (ospDecimalValue<3>){0})
   {
@@ -521,19 +510,17 @@ static void completeAutoTune()
     PGain = -PGain;
     IGain = -IGain;
     DGain = -DGain;
-    if (ctrlDirection == PID::DIRECT)
+    if (myPID.getDirection() == PID::DIRECT)
     {
-      myPID.SetControllerDirection(PID::REVERSE);
-      ctrlDirection = PID::REVERSE;
+      myPID.setControllerDirection(PID::REVERSE);
     }
     else
     {
-      myPID.SetControllerDirection(PID::DIRECT);
-      ctrlDirection = PID::DIRECT;
+      myPID.setControllerDirection(PID::DIRECT);
     }      
   }
 
-  myPID.SetTunings(PGain, IGain, DGain);
+  myPID.setTunings(PGain, IGain, DGain);
 
   // this will restore the user-requested PID controller mode
   stopAutoTune();
@@ -602,13 +589,13 @@ void loop()
     readInputTime += theInputDevice.requestInput();
   }
 
-  if (tuning)
+  if (myPID.isTuning())
   {
-    byte val = aTune.Runtime();
+    bool finishedTuning = aTune.runtime();
 
-    if (val != 0)
+    if (finishedTuning)
     {
-      tuning = false;
+      myPID.setTuning(false);
       completeAutoTune();
     }
   }
@@ -626,11 +613,11 @@ void loop()
     }
 
     // update the PID
-    myPID.Compute();  
+    myPID.compute();  
   }  
   // update the displayed output
   // unless in manual mode, in which case a new value may have been entered
-  if (tuning || (modeIndex != PID::MANUAL))
+  if (myPID.isTuning() || (myPID.getMode() != PID::MANUAL))
   {
     manualOutput = makeDecimal<1>(output);
   }

@@ -46,7 +46,7 @@ ospDecimalValue<1> manualOutputRemember;
 
 static void startAutoTune()
 {
-  ATuneModeRemember = myPID.GetMode();
+  ATuneModeRemember = myPID.getMode();
   manualOutputRemember = manualOutput;
   
   // step value, avoiding output limits 
@@ -59,37 +59,25 @@ static void startAutoTune()
   {
     s = aTuneStep;
   }
-  aTune.SetOutputStep(s);
+  aTune.setOutputStep(s);
 
-#if defined AUTOTUNE_AMIGOF_PI
-if (aTuneMethod == PID_ATune::AMIGOF_PI || tuningRule[aTuneMethod].PI_controller())
-#else
-if (tuningRule[aTuneMethod].PI_controller())
-#endif
-
-  {
-    myPID.SetTunings(makeDecimal<3>(aTune.GetKp()), makeDecimal<3>(aTune.GetKi()), (ospDecimalValue<3>){0});
-  }
- 
-  myPID.SetMode(PID::MANUAL);
-  aTune.SetControlType(aTuneMethod); 
-  aTune.SetNoiseBand(aTuneNoise);
-  aTune.SetLookbackSec(aTuneLookBack);
-  tuning = true;
+  myPID.setMode(PID::MANUAL);
+  aTune.setControlType(aTuneMethod); 
+  aTune.setNoiseBand(aTuneNoise);
+  aTune.setLookbackSec(aTuneLookBack);
+  myPID.setTuning(true);
 }
 
 void stopAutoTune()
 {
-  aTune.Cancel();
-  tuning = false;
-
-  modeIndex = ATuneModeRemember;
+  aTune.cancel();
+  myPID.setTuning(false);
+  myPID.setMode(ATuneModeRemember);
 
   // restore the output to the last manual command; it will be overwritten by the PID
   // if the loop is active
   manualOutput = manualOutputRemember;
   setOutputToManualOutput();
-  myPID.SetMode(modeIndex);
 }
 
 struct ProfileState 
@@ -162,7 +150,7 @@ void profileLoopIteration()
   double target = double(profileState.targetSetpoint);
   
 #if !defined ATMEGA_32kB_FLASH
-  ospAssert(!tuning);
+  ospAssert(!myPID.isTuning());
   ospAssert(runningProfile);
 #endif  
 

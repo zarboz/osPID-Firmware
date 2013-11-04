@@ -24,48 +24,52 @@ class PID
      static const long LOOP_SAMPLE_TIME = 1000;
 
   // commonly used functions **************************************************************************
+
     PID(double*, double*, double*,        // * constructor.  links the PID to the Input, Output, and 
         ospDecimalValue<3>,               //   Setpoint.  Initial tuning parameters are also set here
         ospDecimalValue<3>,
         ospDecimalValue<3>, byte);
 	
-    void SetMode(byte);                   // * sets PID to either Manual (0) or Auto (non-0)
+    void setMode(byte);                   // * sets PID to either Manual (0) or Auto (1)
 
-    void Compute();                       // * performs the PID calculation.  it should be
+    void compute();                       // * performs the PID calculation.  it should be
                                           //   called every time loop() cycles. ON/OFF and
                                           //   calculation frequency can be set using SetMode
                                           //   SetSampleTime respectively
 
-    void SetOutputLimits(double, double); //clamps the output to a specific range. 0-255 by default, but
-					  //it's likely the user will want to change this depending on
-					  //the application
-	
+    void setOutputLimits(double, double); // clamps the output to a specific range. 0-255 by default, but
+					  // it's likely the user will want to change this depending on
+					  // the application
 
+    void setTuning(bool);                 // set Boolean tuning variable
 
   // available but not commonly used functions ********************************************************
-    void SetTunings(ospDecimalValue<3>,   // * While most users will set the tunings once in the    
+
+    void setTunings(ospDecimalValue<3>,   // * While most users will set the tunings once in the    
         ospDecimalValue<3>,         	  //   constructor, this function gives the user the option  
         ospDecimalValue<3>);              //   of changing tunings during runtime for Adaptive control
-    void SetControllerDirection(byte);	  // * Sets the Direction, or "Action" of the controller. DIRECT
+
+    void setControllerDirection(byte);	  // * Sets the Direction, or "Action" of the controller. DIRECT
 					  //   means the output will increase when error is positive. REVERSE
 				          //   means the opposite.  it's very unlikely that this will be needed
 					  //   once it is set in the constructor.
-    void SetSampleTime(int);              // * sets the frequency, in Milliseconds, with which 
+
+    void setSampleTime(int);              // * sets the frequency, in Milliseconds, with which 
                                           //   the PID calculation is performed.  default is 100
 										  
-										  
-										  
   // display functions ****************************************************************
-    ospDecimalValue<3> GetKp();           // These functions query the pid for interal values.
-    ospDecimalValue<3> GetKi();	          //  they were created mainly for the pid front-end,
-    ospDecimalValue<3> GetKd();           // where it's important to know what is actually 
-    byte GetMode();			  //  inside the PID.
-    byte GetDirection();		  //
+
+    ospDecimalValue<3> getKp();           // These functions query the PID for interal values.
+    ospDecimalValue<3> getKi();	          // they were created mainly for the PID front-end,
+    ospDecimalValue<3> getKd();           // where it's important to know what is actually 
+    byte getMode();			  // inside the PID.
+    byte getDirection();		  //
+    bool isTuning();                      //
 
   private:
   
-    void Initialize();
-    void Limit(double*);
+    void initialize();
+    void limit(double*);
 	
     ospDecimalValue<3> dispKp;            // * we'll hold on to the tuning parameters in user-entered 
     ospDecimalValue<3> dispKi;            //   format for display purposes
@@ -82,12 +86,15 @@ class PID
     double *mySetpoint;                   //   PID, freeing the user from having to constantly tell us
                                           //   what these values are.  with pointers we'll just know.
 			  
+    bool tuning;                          // * flag whether auto tune is running for this PID
+
+    byte mode;                            // * automatic or manual control
+
     unsigned long lastTime;
     double ITerm, lastInput;
 
     int SampleTime;
     double outMin, outMax;
-    bool inAuto;
 };
 #endif
 

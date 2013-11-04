@@ -165,8 +165,8 @@ void saveEEPROMSettings()
   ospSettingsHelper settings(CRC16_INIT, SETTINGS_SBYTE1_OFFSET);
 
   sb1.byteVal = 0;
-  sb1.pidMode = modeIndex;
-  sb1.pidDirection = ctrlDirection;
+  sb1.pidMode = myPID.getMode();
+  sb1.pidDirection = myPID.getDirection();
   sb1.powerOnBehavior = powerOnBehavior;
   sb1.setPointIndex = setPointIndex;
   sb1.tripLimitsEnabled = tripLimitsEnabled;
@@ -220,8 +220,8 @@ static void restoreEEPROMSettings()
   ospSettingsHelper settings(CRC16_INIT, SETTINGS_SBYTE1_OFFSET);
 
   settings.restore(sb1.byteVal);
-  modeIndex = sb1.pidMode;
-  ctrlDirection = sb1.pidDirection;
+  myPID.setMode(sb1.pidMode);
+  myPID.setControllerDirection(sb1.pidDirection);
   powerOnBehavior = sb1.powerOnBehavior;
   setPointIndex = sb1.setPointIndex;
   tripLimitsEnabled = sb1.tripLimitsEnabled;

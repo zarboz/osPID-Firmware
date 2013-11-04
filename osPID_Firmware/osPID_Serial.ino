@@ -448,7 +448,7 @@ static void cmdExamineSettings()
   
   Serial.println();
 
-  if (modeIndex == PID::AUTOMATIC)
+  if (myPID.getMode() == PID::AUTOMATIC)
   {
     serialPrintln(F("PID mode"));
   }
@@ -457,7 +457,7 @@ static void cmdExamineSettings()
     serialPrintln(F("Manual mode"));
   }
 
-  if (ctrlDirection == PID::DIRECT)
+  if (myPID.getDirection() == PID::DIRECT)
   {
     serialPrintln(F("Direct action"));
   }
@@ -774,7 +774,7 @@ void processSerialCommand()
     switch (serialCommandBuffer[0])
     {
     case 'A':
-      serialPrintln(tuning);
+      serialPrintln(myPID.isTuning());
       break;
     case 'a':
       serialPrint(aTuneStep);
@@ -790,7 +790,7 @@ void processSerialCommand()
       serialPrintln("9600");
       break;
     case 'D':
-      serialPrintln(ctrlDirection);
+      serialPrintln(myPID.getDirection());
       break;
     case 'd':
       serialPrintln(DGain);
@@ -811,7 +811,7 @@ void processSerialCommand()
       serialPrintln(tripLimitsEnabled);
       break;
     case 'M':
-      serialPrintln(modeIndex);
+      serialPrintln(myPID.getMode());
       break;
     case 'm':
       serialPrintln(aTuneMethod);
@@ -981,12 +981,12 @@ void processSerialCommand()
   switch (serialCommandBuffer[0])
   {
   case 'A': // stop/start auto-tuner
-    if ((tuning ^ (byte) i1) == 0) // autotuner already on/off
+    if ((myPID.isTuning() ^ (byte) i1) == 0) // autotuner already on/off
     {
       goto out_ACK; // no EEPROM writeback needed
     }
-    tuning = i1;
-    if (tuning)
+    myPID.setTuning(i1);
+    if (myPID.isTuning())
     {
       startAutoTune();
     }
@@ -995,11 +995,13 @@ void processSerialCommand()
       stopAutoTune();
     }
     break;
+
   case 'a': // set the auto-tune parameters
     aTuneStep = makeDecimal<1>(i3, d3);
     aTuneNoise = makeDecimal<1>(i2, d2);
     aTuneLookBack = i1;
     break;
+
   case 'B':
     ospDecimalValue<1> cal;
     cal = makeDecimal<1>(i1, d1);
@@ -1007,6 +1009,7 @@ void processSerialCommand()
     theInputDevice.setCalibration(cal);
     displayCalibration = cal;
     break;
+
   case 'C': // cancel profile execution
     if (runningProfile)
     {
@@ -1017,6 +1020,7 @@ void processSerialCommand()
       goto out_EMOD;
     }
     goto out_ACK; // no EEPROM writeback needed
+
 /*
   // no longer implemented
   case 'c': // set the comm speed
@@ -1024,12 +1028,13 @@ void processSerialCommand()
       return;
     goto out_EINV;
 */
+
   case 'D': // set the controller action direction
-    ctrlDirection = i1;
-    myPID.SetControllerDirection(i1);
+    myPID.setControllerDirection(i1);
     break;
+
   case 'd': // set the D gain
-    if (tuning)
+    if (myPID.isTuning())
     {
       goto out_EMOD;
     }
@@ -1038,29 +1043,33 @@ void processSerialCommand()
       goto out_EINV;
     }
     break;
+
   case 'E': // execute a profile by name
-    if (tuning || runningProfile)
+    if (myPID.isTuning() || runningProfile)
+    {
       goto out_EMOD;
-      
+    }  
     if (!cmdStartProfile(p))
     {
       goto out_EINV;
     }
-    modeIndex = PID::AUTOMATIC;
+    myPID.setMode(PID::AUTOMATIC);
     goto out_ACK; // no EEPROM writeback needed
+
   case 'e': // execute a profile by number
-    if (tuning || runningProfile || modeIndex != PID::AUTOMATIC)
+    if (myPID.isTuning() || runningProfile || (myPID.getMode() != PID::AUTOMATIC))
     {
       goto out_EMOD;
     }
-
     activeProfileIndex = i1;
     startProfile();
     goto out_ACK; // no EEPROM writeback needed
+
   case 'I': // directly set the input command
     goto out_EMOD; // (I don't think so)
+
   case 'i': // set the I gain
-    if (tuning)
+    if (myPID.isTuning())
     {
       goto out_EMOD;
     }
@@ -1069,12 +1078,12 @@ void processSerialCommand()
       goto out_EINV;
     }
     break;
+
   case 'J': // change the active setpoint
     if (i1 >= 4)
     {
       goto out_EINV;
     }
-
     setPointIndex = i1;
     updateActiveSetPoint();
     break;
@@ -1083,9 +1092,9 @@ void processSerialCommand()
   case 'K': // memory peek
     cmdPeek(i1);
     goto out_ACK; // no EEPROM writeback needed
+
   case 'k': // memory poke
     BOUNDS_CHECK(i1, 0, 255);
-
     cmdPoke(i2, i1);
     goto out_ACK; // no EEPROM writeback needed
 #endif    
@@ -1098,38 +1107,43 @@ void processSerialCommand()
       }
     }
     break;
+
   case 'L': // set limit trip enabled
     tripLimitsEnabled = i1;
     break;
+
   case 'M': // set the controller mode (PID or manual)
-    modeIndex = i1;
-    if (modeIndex == PID::MANUAL)
+    myPID.setMode(i1);
+    if (myPID.getMode() == PID::MANUAL)
     {
       setOutputToManualOutput();
     }
-    myPID.SetMode(i1);
     break;
+
   case 'm': // select auto tune method
     // turn off auto tune
     if ((i1 < 0) || (i1 > PID_ATune::LAST_AUTO_TUNE_METHOD))
     {
       goto out_EINV;
     }
-    if (tuning)
+    if (myPID.isTuning())
     {
       stopAutoTune();
     }
-    tuning = false;
+    myPID.setTuning(false);
     aTuneMethod = i1;
     break;
+
   case 'N': // clear and name the profile buffer
     if (strlen(p) > ospProfile::NAME_LENGTH)
+    {
       goto out_EINV;
-
+    }
     profileBuffer.clear();
     memset(profileBuffer.name, 0, sizeof(profileBuffer.name));
     strcpy(profileBuffer.name, p);
     break;
+
   case 'O': // directly set the output command
     {
       ospDecimalValue<1> o = makeDecimal<1>(i1, d1);
@@ -1137,16 +1151,15 @@ void processSerialCommand()
       {
         goto out_EINV;
       }
-
-      if (tuning || runningProfile || modeIndex != PID::MANUAL)
+      if (myPID.isTuning() || runningProfile || (myPID.getMode() == PID::AUTOMATIC))
       {
         goto out_EMOD;
       }
-
       manualOutput = o;
       output = double(manualOutput);
     }
     break;
+
   case 'o': // set power-on behavior
     if (i1 > 2)
     {
@@ -1154,14 +1167,16 @@ void processSerialCommand()
     }
     powerOnBehavior = i1;
     break;
+
   case 'P': // define a profile step
     if (!profileBuffer.addStep(i3, i2, makeDecimal<1>(i1, d1)))
     {
       goto out_EINV;
     }
     break;
+
   case 'p': // set the P gain
-    if (tuning)
+    if (myPID.isTuning())
     {
       goto out_EMOD;
     }
@@ -1170,29 +1185,33 @@ void processSerialCommand()
       goto out_EINV;
     }
     break;
+
   case 'Q': // query current status
     cmdQuery();
     goto out_ACK; // no EEPROM writeback needed
-  case 'R': // run a profile by number
-    if (tuning || runningProfile)
-      goto out_EMOD;
 
-    modeIndex = PID::AUTOMATIC;
+  case 'R': // run a profile by number
+    if (myPID.isTuning() || runningProfile)
+    {
+      goto out_EMOD;
+    }
+    myPID.setMode(PID::AUTOMATIC);
     activeProfileIndex = i1;
     startProfile();
     goto out_ACK; // no EEPROM writeback needed
+
   case 'r': // reset memory
     if (i1 != -999)
     {
       goto out_EINV;
     }
-
     clearEEPROM();
     serialPrintln(F("Memory marked for reset, now restart."));
     goto out_ACK; // no EEPROM writeback needed or wanted!
+
   case 'S': // change the setpoint
     {
-      if (tuning)
+      if (myPID.isTuning())
       {
         goto out_EMOD;
       }
@@ -1204,10 +1223,12 @@ void processSerialCommand()
       updateActiveSetPoint();
     }
     break;
+
   case 's': // set the inputType
     BOUNDS_CHECK(i1, 0, 2);
     theInputDevice.ioType = (byte) i1;
     break;
+
   case 'T': // clear a trip
     if (!tripped)
     {
@@ -1220,9 +1241,11 @@ void processSerialCommand()
 #endif    
 
     goto out_ACK; // no EEPROM writeback needed
+
   case 't': // set trip auto-reset
     tripAutoReset = i1;
     break;
+
   case 'u': // set trip upper limit
     {
       if (!trySetTemp(&upperTripLimit, i1, d1))
@@ -1231,9 +1254,11 @@ void processSerialCommand()
       }
     }
     break;
+
   case 'V': // save the profile buffer to EEPROM
     saveEEPROMProfile(i1);
     goto out_ACK; // no EEPROM writeback needed
+
   case 'W': // set the output window size in seconds
     ospDecimalValue<1> window;
     window = makeDecimal<1>(i1, d1);
@@ -1241,6 +1266,7 @@ void processSerialCommand()
     theOutputDevice.setOutputWindowSeconds(window);
     displayWindow = window;
     break;
+
   case 'X': // examine: dump the controller settings
   
 #if !defined ATMEGA_32kB_FLASH
@@ -1253,9 +1279,11 @@ void processSerialCommand()
   case 'x': // examine a profile: dump a description of the give profile
     cmdExamineProfile(i1);
     goto out_ACK; // no EEPROM writeback needed
+
   case 'Y': // identify
     cmdIdentify();
     goto out_ACK; // no EEPROM writeback needed
+
   default:
     goto out_EINV;
   }
