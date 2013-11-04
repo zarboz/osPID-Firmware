@@ -23,6 +23,29 @@
  * simple system.
  *******************************************************************************/
  
+ /* Thoughts looking ahead to having multiple PID controller instances.
+  * 
+  * Really there should be a PID_engine class and a PID_controller superclass
+  *
+  * the engine class is mainly (solely) concerned with calculating the output
+  * 
+  * profile behaviour should be part of the controller class because it 
+  * manipulates the engine
+  *
+  * auto tuning should be a method of the engine class, in my opinion
+  * i think the reason it is not currently set up this way is that 
+  * configuring the method needs to happen offline in the controller
+  * not a good enough reason in my view
+  *
+  * alarm behaviour would be easy to integrate into the engine but might 
+  * make more sense as part of the controller
+  *
+  * I/O obviously should be controller methods, the alarm is arguably I/O
+  * the trip limits are based on sensor input which is extrinsic to the engine
+  * 
+  * and obviously the whole millis() based timer polling loop has to go
+  */
+ 
  /*******************************************************************************
  *
  *
@@ -38,8 +61,7 @@
 #include <avr/interrupt.h>
 #include "ospConfig.h"
 #include "ospDecimalValue.h"
-#include "PID_v1_local.h"
-#include "PID_AutoTune_v0_local.h"
+#include "osPID_Engine.h"
 #include "ospAnalogButton.h"
 #include "ospProfile.h"
 
@@ -80,7 +102,6 @@ extern bool okKeyLongPress();
 extern void backKeyPress();
 extern void updownKeyPress(bool);
 extern void okKeyPress();
-extern void stopAutoTune();
 extern void markSettingsDirty();
 extern void profileLoopIteration();
 extern void drawMenu();
@@ -94,6 +115,15 @@ extern void processSerialCommand();
  *
  *
  *******************************************************************************/
+
+// static constant variables
+// power-on options
+enum 
+{
+  POWERON_DISABLE = 0,
+  POWERON_CONTINUE_LOOP,
+  POWERON_RESUME_PROFILE
+};
 
 // we use the LiquidCrystal library to drive the LCD screen
 LiquidCrystal theLCD(lcdRsPin, lcdEnablePin, lcdD0Pin, lcdD1Pin, lcdD2Pin, lcdD3Pin);
@@ -114,7 +144,7 @@ boolean runningProfile = false;
 ospDecimalValue<3> PGain = { 1600 }, IGain = { 200 }, DGain = { 0 };
 
 // the 4 setpoints we can easily switch between
-#if !defined UNITS_FAHRENHEIT
+#if !defined (UNITS_FAHRENHEIT)
 ospDecimalValue<1> setPoints[4] = { { 250 }, { 650 }, { 1000 }, { 1250 } };
 #else
 ospDecimalValue<1> setPoints[4] = { { 800 }, { 1500 }, { 2120 }, { 2600 } };
@@ -139,14 +169,16 @@ double output = 0.0;
 ospDecimalValue<1> manualOutput = { 0 };
 
 // temporary fixed point decimal values for display and data entry
-ospDecimalValue<1> displaySetpoint = { 250 }, displayInput = { -19999 }, displayCalibration = { 0 }, 
-  displayWindow = { 50 }; 
+ospDecimalValue<1> displaySetpoint    = { 250 };
+ospDecimalValue<1> displayInput       = { -19999 }; // NaN
+ospDecimalValue<1> displayCalibration = { 0 }; 
+ospDecimalValue<1> displayWindow      = { 50 }; 
 
 // the hard trip limits
-#if !defined UNITS_FAHRENHEIT
-ospDecimalValue<1> lowerTripLimit = { 0 } , upperTripLimit = { 1250 };
+#if !defined (UNITS_FAHRENHEIT)
+ospDecimalValue<1> lowerTripLimit =   { 0 } , upperTripLimit = { 1250 };
 #else
-ospDecimalValue<1> lowerTripLimit = { 0 } , upperTripLimit = { 2600 };
+ospDecimalValue<1> lowerTripLimit = { 320 } , upperTripLimit = { 2600 };
 #endif
 
 bool tripLimitsEnabled;
@@ -157,23 +189,19 @@ byte powerOnBehavior = DEFAULT_POWER_ON_BEHAVIOR;
 
 bool controllerIsBooting = true;
 
-// auto tune algorithm
-byte aTuneMethod = 1;//PID_ATune::DEFAULT_METHOD;
-
-// the parameters for the autotuner
-ospDecimalValue<1> aTuneStep  = (ospDecimalValue<1>){PID_ATune::DEFAULT_OUTPUT_STEP};
-int aTuneLookBack = PID_ATune::DEFAULT_LOOKBACK_SEC;
-
-#if !defined UNITS_FAHRENHEIT
-ospDecimalValue<1> aTuneNoise = makeDecimal<1>(PID_ATune::DEFAULT_NOISE_BAND_CELSIUS * 1.8); 
-#else 
-ospDecimalValue<1> aTuneNoise = makeDecimal<1>(PID_ATune::DEFAULT_NOISE_BAND_CELSIUS);
-#endif
-
-PID_ATune aTune(&lastGoodInput, &output);
-
 // the actual PID controller
 PID myPID(&lastGoodInput, &output, &activeSetPoint, PGain, IGain, DGain, PID::DIRECT);
+
+// PID auto tune parameters
+byte aTuneMethod = PID::AUTOTUNE_DEFAULT_METHOD; 
+ospDecimalValue<1> aTuneStep  = (ospDecimalValue<1>){PID::AUTOTUNE_DEFAULT_OUTPUT_STEP};
+int aTuneLookBack             = PID::AUTOTUNE_DEFAULT_LOOKBACK_SEC;
+
+#if !defined (UNITS_FAHRENHEIT)
+ospDecimalValue<3> aTuneNoise = makeDecimal<3>(PID::AUTOTUNE_DEFAULT_NOISE_BAND_CELSIUS);
+#else
+ospDecimalValue<3> aTuneNoise = makeDecimal<3>(PID::AUTOTUNE_DEFAULT_NOISE_BAND_CELSIUS * 1.8);
+#endif 
 
 // timekeeping to schedule the various tasks in the main loop
 unsigned long now, lcdTime, readInputTime;
@@ -181,7 +209,7 @@ unsigned long now, lcdTime, readInputTime;
 extern void drawNotificationCursor(char icon);
 
 // some constants in flash memory, for reuse
-#if !defined UNITS_FAHRENHEIT
+#if !defined (UNITS_FAHRENHEIT)
 const __FlashStringHelper *FdegCelsius() { return F(" °C"); }
 #else
 const __FlashStringHelper *FdegFahrenheit() { return F(" °F"); }
@@ -197,7 +225,7 @@ PROGMEM const char Pprofile[] = "Profile ";
  *
  *******************************************************************************/
 
-#if !defined SILENCE_BUZZER
+#if !defined (SILENCE_BUZZER)
 // buzzer 
 volatile int buzz = 0; // countdown timer for intermittent buzzer
 enum { BUZZ_OFF = 0, BUZZ_UNTIL_CANCEL = -769 };
@@ -293,7 +321,7 @@ void setup()
   pinMode(buzzerPin, OUTPUT);
   
   // set up timer2 for buzzer interrupt
-#if !defined SILENCE_BUZZER
+#if !defined (SILENCE_BUZZER)
   cli();                   // disable interrupts
   OCR2A = 249;              // set up timer2 CTC interrupts for buzzer
   TCCR2A |= (1 << WGM21);  // CTC Mode
@@ -318,7 +346,7 @@ void setup()
   theOutputDevice.initialize();
 
   // set up the serial interface
-#if !defined STANDALONE_CONTROLLER
+#if !defined (STANDALONE_CONTROLLER)
   setupSerial();
 #endif
 
@@ -332,7 +360,7 @@ void setup()
 
   // configure the PID loop 
   updateActiveSetPoint();
-  myPID.setSampleTime(PID::LOOP_SAMPLE_TIME);
+  myPID.setSampleTime(PID::DEFAULT_LOOP_SAMPLE_TIME);
   myPID.setOutputLimits(0, 100);
   myPID.setTunings(PGain, IGain, DGain);
 
@@ -491,43 +519,6 @@ static void checkButtons()
 // Characters from the serial port are received asynchronously: it is only the
 // command _processing_ which needs to be scheduled.
 
-static void completeAutoTune()
-{
-  // We're done, set the tuning parameters
-  PGain = makeDecimal<3>(aTune.getKp());
-  IGain = makeDecimal<3>(aTune.getKi());
-  DGain = makeDecimal<3>(aTune.getKd());
-
-  // set the PID controller to accept the new gain settings
-  // use whatever direction of control is currently set
-  //myPID.SetControllerDirection(PID::DIRECT);
-  myPID.setMode(PID::AUTOMATIC);
-
-  if (PGain < (ospDecimalValue<3>){0})
-  {
-    // the auto-tuner found a negative gain sign: convert the coefficients
-    // to positive and change the direction of controller action
-    PGain = -PGain;
-    IGain = -IGain;
-    DGain = -DGain;
-    if (myPID.getDirection() == PID::DIRECT)
-    {
-      myPID.setControllerDirection(PID::REVERSE);
-    }
-    else
-    {
-      myPID.setControllerDirection(PID::DIRECT);
-    }      
-  }
-
-  myPID.setTunings(PGain, IGain, DGain);
-
-  // this will restore the user-requested PID controller mode
-  stopAutoTune();
-
-  markSettingsDirty();
-}
-
 bool settingsWritebackNeeded;
 unsigned long settingsWritebackTime;
 
@@ -558,7 +549,7 @@ void realtimeLoop()
   blockSlowOperations = false;
 }
 
-#if !defined STANDALONE_CONTROLLER
+#if !defined (STANDALONE_CONTROLLER)
 // we accumulate characters for a single serial command in this buffer
 char serialCommandBuffer[33];
 byte serialCommandLength;
@@ -588,33 +579,21 @@ void loop()
     }
     readInputTime += theInputDevice.requestInput();
   }
-
-  if (myPID.isTuning())
+  
+  // step the profile, if there is one running
+  // this may call ospSettingsHelper::eepromClearBits(), but not
+  // ospSettingsHelper::eepromWrite()
+  if (runningProfile)
   {
-    bool finishedTuning = aTune.runtime();
-
-    if (finishedTuning)
-    {
-      myPID.setTuning(false);
-      completeAutoTune();
-    }
-  }
-  else
-  {
-    // step the profile, if there is one running
-    // this may call ospSettingsHelper::eepromClearBits(), but not
-    // ospSettingsHelper::eepromWrite()
-    if (runningProfile)
-    {
-      profileLoopIteration();
+    profileLoopIteration();
       
-      // update displayed set point
-      updateActiveSetPoint();
-    }
+    // update displayed set point
+    updateActiveSetPoint();
+  }
 
-    // update the PID
-    myPID.compute();  
-  }  
+  // update the PID
+  myPID.compute();  
+  
   // update the displayed output
   // unless in manual mode, in which case a new value may have been entered
   if (myPID.isTuning() || (myPID.getMode() != PID::MANUAL))
@@ -639,7 +618,7 @@ void loop()
       manualOutput = (ospDecimalValue<1>){0};
       tripped = true;
       
-#if !defined SILENCE_BUZZER  
+#if !defined (SILENCE_BUZZER)  
       if (buzz >= BUZZ_OFF)
       {
         buzzUntilCancel; // could get pretty annoying
@@ -648,7 +627,7 @@ void loop()
 
     }
 
-#if !defined SILENCE_BUZZER      
+#if !defined (SILENCE_BUZZER)      
     if (!tripped)
     {
       buzzOff;
@@ -659,7 +638,7 @@ void loop()
   {
     tripped = false;
     
-#if !defined SILENCE_BUZZER 
+#if !defined (SILENCE_BUZZER) 
     buzzOff;
 #endif    
 
@@ -706,7 +685,7 @@ void loop()
     saveEEPROMSettings();
   }
 
-#if !defined STANDALONE_CONTROLLER
+#if !defined (STANDALONE_CONTROLLER)
   // accept any pending characters from the serial buffer
   byte avail = Serial.available();
   while (avail--)

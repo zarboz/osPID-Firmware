@@ -1,7 +1,7 @@
 /* This file contains the routines implementing serial-port (i.e. USB) communications
    between the controller and a command computer */
    
-#if !defined STANDALONE_CONTROLLER
+#if !defined (STANDALONE_CONTROLLER)
 
 #include <math.h>
 #include <avr/pgmspace.h>
@@ -278,7 +278,7 @@ template<int D> static void __attribute__ ((noinline)) serialPrintlnTemp(ospDeci
 {
   serialPrint(val);
   
-#if !defined UNITS_FAHRENHEIT
+#if !defined (UNITS_FAHRENHEIT)
   serialPrintln(FdegCelsius());
 #else
   serialPrintln(FdegFahrenheit());
@@ -290,7 +290,7 @@ static void __attribute__ ((noinline)) serialPrintlnFloatTemp(double val)
 {
   serialPrint(val);
   
-#if !defined UNITS_FAHRENHEIT
+#if !defined (UNITS_FAHRENHEIT)
   serialPrintln(FdegCelsius());
 #else
   serialPrintln(FdegFahrenheit());
@@ -354,7 +354,7 @@ static bool cmdStartProfile(const char *name)
   return false;
 }
 
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
 static void cmdPeek(int address)
 {
   byte val;
@@ -438,7 +438,7 @@ static void cmdQuery()
   serialCommandLength = 1;
 }
 
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
 static void cmdExamineSettings()
 {
   unsigned int crc16;
@@ -484,7 +484,7 @@ static void cmdExamineSettings()
     serialPrintFcolon();
     serialPrint(setPoints[i]);
     
-#if !defined UNITS_FAHRENHEIT
+#if !defined (UNITS_FAHRENHEIT)
     serialPrint(FdegCelsius());
 #else
     serialPrint(FdegFahrenheit());
@@ -544,7 +544,7 @@ static void cmdExamineSettings()
   serialPrintDeviceFloatSettings(false);
   // same for integer settings, if any
 }
-#endif // if !defined ATMEGA_32kB_FLASH
+#endif // if !defined (ATMEGA_32kB_FLASH)
 
 static void serialPrintProfileState(byte profileIndex, byte stepIndex)
 {
@@ -665,7 +665,7 @@ PROGMEM SerialCommandParseData commandParseData[] =
   { 'I', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'J', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
   { 'K', ARGS_ONE_NUMBER },
 #endif
 
@@ -689,7 +689,7 @@ PROGMEM SerialCommandParseData commandParseData[] =
   { 'd', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'i', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
   { 'k', ARGS_TWO_NUMBERS },
 #endif
 
@@ -942,7 +942,7 @@ void processSerialCommand()
     break;
   default:
   
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
     BUGCHECK();
 #else    
     ;
@@ -985,20 +985,19 @@ void processSerialCommand()
     {
       goto out_ACK; // no EEPROM writeback needed
     }
-    myPID.setTuning(i1);
-    if (myPID.isTuning())
+    if (i1 == 0)
     {
-      startAutoTune();
+      myPID.stopAutoTune();
     }
     else
     {
-      stopAutoTune();
+      myPID.startAutoTune(aTuneMethod, aTuneStep, aTuneNoise, aTuneLookBack);
     }
     break;
 
   case 'a': // set the auto-tune parameters
     aTuneStep = makeDecimal<1>(i3, d3);
-    aTuneNoise = makeDecimal<1>(i2, d2);
+    aTuneNoise = makeDecimal<3>(i2, d2);
     aTuneLookBack = i1;
     break;
 
@@ -1088,7 +1087,7 @@ void processSerialCommand()
     updateActiveSetPoint();
     break;
     
-#if !defined ATMEGA_32kB_FLASH  
+#if !defined (ATMEGA_32kB_FLASH)  
   case 'K': // memory peek
     cmdPeek(i1);
     goto out_ACK; // no EEPROM writeback needed
@@ -1122,15 +1121,14 @@ void processSerialCommand()
 
   case 'm': // select auto tune method
     // turn off auto tune
-    if ((i1 < 0) || (i1 > PID_ATune::LAST_AUTO_TUNE_METHOD))
+    if ((i1 < 0) || (i1 > PID::LAST_AUTO_TUNE_METHOD))
     {
       goto out_EINV;
     }
     if (myPID.isTuning())
     {
-      stopAutoTune();
+      myPID.stopAutoTune();
     }
-    myPID.setTuning(false);
     aTuneMethod = i1;
     break;
 
@@ -1236,7 +1234,7 @@ void processSerialCommand()
     }
     tripped = false;
     
-#if !defined SILENCE_BUZZER    
+#if !defined (SILENCE_BUZZER)    
     buzzOff;
 #endif    
 
@@ -1269,7 +1267,7 @@ void processSerialCommand()
 
   case 'X': // examine: dump the controller settings
   
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
     cmdExamineSettings();
     goto out_ACK; // no EEPROM writeback needed
 #else

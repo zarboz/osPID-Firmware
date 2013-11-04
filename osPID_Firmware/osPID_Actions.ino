@@ -3,13 +3,12 @@
 #include "ospConfig.h"
 #include "ospProfile.h"
 #include "ospAssert.h"
-#include "PID_AutoTune_v0_local.h"
 
 #undef BUGCHECK
 #define BUGCHECK() ospBugCheck(PSTR("PROF"), __LINE__);
 
 // prototype definitions
-extern Tuning tuningRule[PID_ATune::NO_OVERSHOOT_PID + 1];
+extern Tuning tuningRule[PID::NO_OVERSHOOT_PID + 1];
 extern void recordProfileStepCompletion(byte);
 extern void stopProfile();
 extern void recordProfileStart();
@@ -41,45 +40,6 @@ void ospBugCheck(const char *block, int line)
   }
 }
 
-byte ATuneModeRemember;
-ospDecimalValue<1> manualOutputRemember;
-
-static void startAutoTune()
-{
-  ATuneModeRemember = myPID.getMode();
-  manualOutputRemember = manualOutput;
-  
-  // step value, avoiding output limits 
-  ospDecimalValue<1> s = makeDecimal<1>(output);
-  if ((ospDecimalValue<1>){ 500 } < s)
-  {
-    s = (ospDecimalValue<1>){ 1000 } - s; 
-  }
-  if (aTuneStep < s)
-  {
-    s = aTuneStep;
-  }
-  aTune.setOutputStep(s);
-
-  myPID.setMode(PID::MANUAL);
-  aTune.setControlType(aTuneMethod); 
-  aTune.setNoiseBand(aTuneNoise);
-  aTune.setLookbackSec(aTuneLookBack);
-  myPID.setTuning(true);
-}
-
-void stopAutoTune()
-{
-  aTune.cancel();
-  myPID.setTuning(false);
-  myPID.setMode(ATuneModeRemember);
-
-  // restore the output to the last manual command; it will be overwritten by the PID
-  // if the loop is active
-  manualOutput = manualOutputRemember;
-  setOutputToManualOutput();
-}
-
 struct ProfileState 
 {
   unsigned long stepEndMillis;
@@ -105,7 +65,7 @@ bool startCurrentProfileStep()
     return false;
   }
 
-#if !defined SILENCE_BUZZER
+#if !defined (SILENCE_BUZZER)
   if (stepType & ospProfile::STEP_FLAG_BUZZER)
   {
     buzzMillis(1000);
@@ -149,7 +109,7 @@ void profileLoopIteration()
   double delta;
   double target = double(profileState.targetSetpoint);
   
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
   ospAssert(!myPID.isTuning());
   ospAssert(runningProfile);
 #endif  
@@ -204,7 +164,7 @@ void profileLoopIteration()
 static void startProfile()
 {
   
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
   ospAssert(!runningProfile);
 #endif  
 
@@ -221,11 +181,11 @@ static void startProfile()
 void stopProfile()
 {
   
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
   ospAssert(runningProfile);
 #endif
 
-#if !defined SILENCE_BUZZER
+#if !defined (SILENCE_BUZZER)
   buzzOff;
 #endif
 

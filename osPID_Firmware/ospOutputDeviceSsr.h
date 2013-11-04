@@ -1,4 +1,4 @@
-#if !defined OSPOUTPUTDEVICESSR_H
+#if !defined (OSPOUTPUTDEVICESSR_H)
 #define OSPOUTPUTDEVICESSR_H
 
 #include "ospIODevice.h"

@@ -269,14 +269,14 @@ static void restoreEEPROMSettings()
   settings.skipTo(INPUT_DEVICE_SETTINGS_OFFSET);
   theInputDevice.restoreSettings(settings);
 
-#if !defined USE_SIMULATOR
+#if !defined (USE_SIMULATOR)
   displayCalibration = theInputDevice.getCalibration();
 #endif
 
   settings.skipTo(OUTPUT_DEVICE_SETTINGS_OFFSET);
   theOutputDevice.restoreSettings(settings);
 
-#if !defined USE_SIMULATOR
+#if !defined (USE_SIMULATOR)
   displayWindow = theOutputDevice.getOutputWindowSeconds();
 #endif
 
@@ -417,7 +417,7 @@ static char getProfileNameCharAt(byte profileIndex, byte i)
                         + i;
   char ch;
 
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
   ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
   ospAssert((i >= 0) && (i < ospProfile::NAME_LENGTH+1));
 #endif  
@@ -432,7 +432,7 @@ static void getProfileStepData(byte profileIndex, byte i, byte *type, unsigned l
   const int base = PROFILE_BLOCK_START_OFFSET
                     + profileIndex * PROFILE_BLOCK_LENGTH;
 
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
   ospAssert((profileIndex >= 0) && (profileIndex < NR_PROFILES));
 #endif  
 

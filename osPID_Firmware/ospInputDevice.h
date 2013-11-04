@@ -1,4 +1,4 @@
-#if !defined OSPINPUTDEVICE_H
+#if !defined (OSPINPUTDEVICE_H)
 #define OSPINPUTDEVICE_H
 
 #include "ospIODevice.h"
@@ -246,7 +246,7 @@ public:
       return NAN;
     }
 
-#if !defined UNITS_FAHRENHEIT
+#if !defined (UNITS_FAHRENHEIT)
     return temperature + inputSetting[ioType];
 #else
     return (temperature * 1.8 + 32.0) + inputSetting[ioType];

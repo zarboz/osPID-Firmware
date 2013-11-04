@@ -1,4 +1,4 @@
-#if !defined OSPSIMULATOR_H
+#if !defined (OSPSIMULATOR_H)
 #define OSPSIMULATOR_H
 
 #include "ospIODevice.h"

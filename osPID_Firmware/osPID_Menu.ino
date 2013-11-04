@@ -9,14 +9,11 @@
 #undef BUGCHECK
 #define BUGCHECK() ospBugCheck(PSTR("MENU"), __LINE__);
 
-enum { 
-  firstDigitPosition = 6, 
-  lastDigitPosition  = firstDigitPosition + 4 
-};
+static const byte firstDigitPosition = 6;
+static const byte lastDigitPosition  = firstDigitPosition + 4;
 
-enum { MENU_FLAG_2x2_FORMAT = 0x01 };
+static const byte MENU_FLAG_2x2_FORMAT = 0x01;
 
-  
 /*
  * This class encapsulates the PROGMEM tables which define the menu system.
  */
@@ -56,7 +53,7 @@ enum
   ITEM_SETPOINT_MENU,
   ITEM_TRIP_MENU,
   
-#if !defined USE_SIMULATOR
+#if !defined (USE_SIMULATOR)
   ITEM_INPUT_MENU,
 #endif
 
@@ -115,7 +112,7 @@ PROGMEM const byte mainMenuItems[4] = { ITEM_DASHBOARD_MENU, ITEM_TUNING_MENU, I
 PROGMEM const byte dashMenuItems[5] = { ITEM_SETPOINT, ITEM_INPUT, ITEM_OUTPUT, ITEM_PID_MODE, ITEM_TRIP_MENU };
 PROGMEM const byte tuneMenuItems[5] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_AUTOTUNE_CMD };
 
-#if !defined USE_SIMULATOR
+#if !defined (USE_SIMULATOR)
 PROGMEM const byte configMenuItems[5] = { ITEM_INPUT_MENU, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU };
 #else
 PROGMEM const byte configMenuItems[2] = { ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU };
@@ -124,7 +121,7 @@ PROGMEM const byte configMenuItems[2] = { ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU
 PROGMEM const byte profileMenuItems[3] = { ITEM_PROFILE1, ITEM_PROFILE2, ITEM_PROFILE3 };
 PROGMEM const byte setpointMenuItems[4] = { ITEM_SETPOINT1, ITEM_SETPOINT2, ITEM_SETPOINT3, ITEM_SETPOINT4 };
 
-#if !defined USE_SIMULATOR
+#if !defined (USE_SIMULATOR)
 PROGMEM const byte inputMenuItems[3] = { ITEM_INPUT_THERMISTOR, ITEM_INPUT_ONEWIRE, ITEM_INPUT_THERMOCOUPLE };
 #else
 // only one simulation currently implemented so no need for menu
@@ -146,7 +143,7 @@ PROGMEM const MenuItem menuData[MENU_COUNT + 1] =
   { sizeof(setpointMenuItems), MENU_FLAG_2x2_FORMAT, setpointMenuItems   } ,
   { sizeof(tripMenuItems),     0,                    tripMenuItems       } ,
   
-#if !defined USE_SIMULATOR
+#if !defined (USE_SIMULATOR)
   { sizeof(inputMenuItems),    0,                    inputMenuItems      } ,
 #endif
 
@@ -335,7 +332,7 @@ void drawStartupBanner()
   LCDsetCursorBottomLeft();
   LCDprintln(Pversion);
   
-#if !defined SILENCE_BUZZER  
+#if !defined (SILENCE_BUZZER)
   // buzzMillis(10);
 #endif  
 
@@ -456,7 +453,7 @@ static void drawHalfRowItem(byte row, byte col, bool selected, byte item)
     break;
   default:
   
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
     BUGCHECK();
 #else    
     ;
@@ -572,7 +569,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     case ITEM_CALIBRATION:
     case ITEM_LOWER_TRIP_LIMIT:
     case ITEM_UPPER_TRIP_LIMIT:
-#if !defined UNITS_FAHRENHEIT
+#if !defined (UNITS_FAHRENHEIT)
       theLCD.print(F(" \337C"));
 #else
       theLCD.print(F(" \337F"));
@@ -618,7 +615,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     LCDprintln(PSTR("Alarm"));
     break;
  
-#if !defined USE_SIMULATOR
+#if !defined (USE_SIMULATOR)
   case ITEM_INPUT_MENU:
     LCDprintln(PSTR("Sensor"));
     break;
@@ -667,7 +664,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     }
     break;
     
-#if !defined USE_SIMULATOR 
+#if !defined (USE_SIMULATOR) 
   case ITEM_INPUT_THERMISTOR:
     LCDprintln(PSTR("Thermistor"));
     break;
@@ -716,7 +713,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     break;
   default:
   
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
     BUGCHECK();
 #else    
     ;
@@ -770,7 +767,7 @@ void drawMenu()
     // NOTE: right now the code only supports one screen (<= 4 items) in
     // 2x2 menu mode
     
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
     ospAssert(itemCount <= 4);
 #endif
 
@@ -787,7 +784,7 @@ void drawMenu()
     byte first = menuState.firstItemMenuIndex;
     bool highlightFirst = (menuState.highlightedItemMenuIndex == first);
     
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
     ospAssert(first + 1 < itemCount);
 #endif
 
@@ -890,7 +887,7 @@ void backKeyPress()
     menuState.firstItemMenuIndex = 3;
     break;
     
-#if !defined USE_SIMULATOR
+#if !defined (USE_SIMULATOR)
   case ITEM_INPUT_MENU:
     menuState.currentMenu = ITEM_CONFIG_MENU;
     menuState.highlightedItemMenuIndex = 0;
@@ -902,7 +899,7 @@ void backKeyPress()
   case ITEM_RESET_ROM_MENU:
     menuState.currentMenu = ITEM_CONFIG_MENU;
     
-#if !defined USE_SIMULATOR
+#if !defined (USE_SIMULATOR)
     menuState.highlightedItemMenuIndex = prevMenu - ITEM_INPUT_MENU + 2;
     menuState.firstItemMenuIndex = menuState.highlightedItemMenuIndex - 1;
 #else    
@@ -913,7 +910,7 @@ void backKeyPress()
     break;
   default:
   
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
     BUGCHECK();
 #else    
     ;
@@ -999,7 +996,7 @@ void updownKeyPress(bool up)
       break;
     default:
     
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
     BUGCHECK();
 #else    
     ;
@@ -1034,7 +1031,7 @@ void updownKeyPress(bool up)
     updateActiveSetPoint();
   }
   
-#if !defined USE_SIMULATOR
+#if !defined (USE_SIMULATOR)
   if (item == ITEM_WINDOW_LENGTH)
   {
     theOutputDevice.setOutputWindowSeconds(displayWindow);
@@ -1105,7 +1102,7 @@ void okKeyPress()
       menuState.highlightedItemMenuIndex = setPointIndex;
       break;
       
-#if !defined USE_SIMULATOR
+#if !defined (USE_SIMULATOR)
     case ITEM_INPUT_MENU:
       menuState.highlightedItemMenuIndex = theInputDevice.ioType;
       break;
@@ -1153,11 +1150,11 @@ void okKeyPress()
     }
     if (!myPID.isTuning())
     {
-      startAutoTune();
+      myPID.startAutoTune(aTuneMethod, aTuneStep, aTuneNoise, aTuneLookBack);
     }
     else
     {
-      stopAutoTune();
+      myPID.stopAutoTune();
     }
     break;
 
@@ -1194,7 +1191,7 @@ void okKeyPress()
     startEditing(item);
     break;
     
-#if !defined  USE_SIMULATOR
+#if !defined (USE_SIMULATOR)
   case ITEM_INPUT_THERMISTOR:
   case ITEM_INPUT_ONEWIRE:
   case ITEM_INPUT_THERMOCOUPLE:
@@ -1235,7 +1232,7 @@ void okKeyPress()
     break;
   default:
   
-#if !defined ATMEGA_32kB_FLASH
+#if !defined (ATMEGA_32kB_FLASH)
     BUGCHECK();
 #else    
     ;
