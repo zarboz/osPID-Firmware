@@ -17,7 +17,6 @@ PROGMEM const char PcontrollerName[] = "Stripboard_osPID";
 static const char VERSION_TAG[] = "v1.0";
 PROGMEM const char Pversion[] = "v1.0";
 
-
 /********************************************
  *
  *          HARDWARE  DEFINITIONS
@@ -48,7 +47,6 @@ static const byte buttonsPin          = A4;
 // pin assignment for buzzer
 static const byte buzzerPin           = A5;
 
-
 /********************************************
  *
  *          COMPILATION  OPTIONS
@@ -72,14 +70,18 @@ static const bool unitsFahrenheit = false;
 #endif
 
 // use simulator for input/output
-#define USE_SIMULATOR
+#undef USE_SIMULATOR
 
 // omit serial processing commands for standalone controller
 // setting this option will compile a hex file several kB shorter
 #undef STANDALONE_CONTROLLER
 
 // necessary omissions to compil on Atmega microcontrollers with 32 kB flash
+#if defined (__AVR_ATmega328P__) || if defined (__AVR_ATmega32U4__)
 #define ATMEGA_32kB_FLASH
+#else
+#undef ATMEGA_32kB_FLASH
+#endif
 
 // NB test compilation length using longest options: #undef STANDALONE_CONTROLLER, USE_SIMULATOR, SILENCE_BUZZER, and #define UNITS_FAHRENHEIT
 

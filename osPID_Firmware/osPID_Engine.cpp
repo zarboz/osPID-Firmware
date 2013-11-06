@@ -379,17 +379,20 @@ void PID::startAutoTune(byte aTuneMethod, ospDecimalValue<1> aTuneStep,
   
   // save mode and output
   ATuneModeRemember = mode;
-  manualOutputRemember = manualOutput;
+  manualOutputRemember = manualOutput; 
   
   // calculate step value, avoiding output limits 
-  ospDecimalValue<1> s = makeDecimal<1>(*myOutput);
-  if ((ospDecimalValue<1>){ 500 } < s)
+  ospDecimalValue<1> s    = aTuneStep;
+  ospDecimalValue<1> out  = makeDecimal<1>(*myOutput);
+  ospDecimalValue<1> oMin = makeDecimal<1>(outMin);
+  ospDecimalValue<1> oMax = makeDecimal<1>(outMax);
+  if (s > (out - oMin))
   {
-    s = (ospDecimalValue<1>){ 1000 } - s; 
+    s = out - oMin; 
   }
-  if (aTuneStep < s)
+  if (s > (oMax - out))
   {
-    s = aTuneStep;
+    s = (oMax - out);
   }
 
   // set auto tune parameters
@@ -446,13 +449,11 @@ void PID::stopAutoTune()
   // stop auto tune
   state = AUTOTUNE_OFF;
   tuning = false;
-  
-  // restore saved settings
   mode = ATuneModeRemember;
 
   // restore the output to the last manual command; it will be overwritten by the PID
   // if the loop is active
-  manualOutput = manualOutputRemember; 
+  manualOutput = manualOutputRemember;
   setOutputToManualOutput();
 }
 
@@ -478,11 +479,11 @@ bool PID::autoTune()
     inputOffset = setpoint;
     inputOffsetChange = (ospDecimalValue<3>){0};
     outputStart = *myOutput;
-    workingNoiseBand = noiseBand;  
+    workingNoiseBand = noiseBand;
     workingOstep = oStep;
 
 #if defined (AUTOTUNE_AMIGOF_PI)  
-    newWorkingNoiseBand = noiseBand;  
+    newWorkingNoiseBand = workingNoiseBand;  
 #endif
     
 #if defined (AUTOTUNE_RELAY_BIAS) 
@@ -565,17 +566,18 @@ bool PID::autoTune()
 
           // calculate change in relay bias
           double deltaRelayBias = - processValueOffset(avgStep1, avgStep2) * workingOstep;
-          if (state ==  AUTOTUNE_RELAY_STEP_DOWN)
+          if (state == AUTOTUNE_RELAY_STEP_DOWN)
           {
             deltaRelayBias = -deltaRelayBias;
           }
           
-          if (abs(deltaRelayBias) > workingOstep *  AUTOTUNE_STEP_ASYMMETRY_TOLERANCE)
+          if (abs(deltaRelayBias) > workingOstep * AUTOTUNE_STEP_ASYMMETRY_TOLERANCE)
           {
             // change is large enough to bother with
             relayBias += deltaRelayBias;
             
             // adjust step height with respect to output limits
+            // necessarily know what the output limits are
             double relayHigh = outputStart + workingOstep + relayBias;
             double relayLow  = outputStart - workingOstep + relayBias;
             if (relayHigh > outMax)
@@ -594,6 +596,8 @@ bool PID::autoTune()
             Serial.println(deltaRelayBias);
             Serial.print(F("relayBias "));
             Serial.println(relayBias);
+            Serial.print(F("workingOstep "));
+            Serial.println(workingOstep);
 #endif
 
             // reset relay step counter
@@ -630,7 +634,6 @@ bool PID::autoTune()
   } // if justChanged
 
   // set output
-  // FIXME need to respect output limits
   if (((byte) state & (AUTOTUNE_STEADY_STATE_AFTER_STEP_UP | AUTOTUNE_RELAY_STEP_UP)) > 0)
   {
     
@@ -1021,9 +1024,10 @@ bool PID::autoTune()
   }
 #endif // if defined (AUTOTUNE_AMIGOF_PI)    
 
-  Kp = Ku / tuningRule[controlType].divisor(AUTOTUNE_KP_DIVISOR);
-  Ti = Pu / tuningRule[controlType].divisor(AUTOTUNE_TI_DIVISOR);
-  Td = tuningRule[controlType].PI_controller() ? 0.0 : Pu / tuningRule[controlType].divisor(AUTOTUNE_TD_DIVISOR);
+  Kp = Ku / (double) tuningRule[controlType].divisor(AUTOTUNE_KP_DIVISOR);
+  Ti = Pu / (double) tuningRule[controlType].divisor(AUTOTUNE_TI_DIVISOR);
+  Td = tuningRule[controlType].PI_controller() ? 
+       0.0 : Pu / (double) tuningRule[controlType].divisor(AUTOTUNE_TD_DIVISOR);
 
   // converged
   return true;

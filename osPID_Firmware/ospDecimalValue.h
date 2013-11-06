@@ -10,8 +10,8 @@
  */
 
 // these enable compile-time evaluation of 10**N as pow10<N>::value
-template<int N> struct ospPow10 { enum { value = 10 * ospPow10<N-1>::value }; };
-template<> struct ospPow10<0> { enum { value = 1 }; };
+template<int N> struct ospPow10 { static const unsigned int value = 10 * ospPow10<N-1>::value; };
+template<> struct ospPow10<0> { static const unsigned int value = 1; };
 
 template<int D> class ospDecimalValue;
 template<int D> class ospDecimalMultiplyResult;

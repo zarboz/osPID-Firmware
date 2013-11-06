@@ -8,7 +8,7 @@
 
 // verbose debug option
 // requires open Serial port
-#define AUTOTUNE_DEBUG
+#undef AUTOTUNE_DEBUG
 
 // AMIGOf tuning rule
 #define AUTOTUNE_AMIGOF_PI
@@ -24,7 +24,7 @@
 // but sometimes unbalanced oscillations can be 
 // persuaded to converge where they might not 
 // otherwise have done so
-#define AUTOTUNE_RELAY_BIAS
+#undef AUTOTUNE_RELAY_BIAS
 
 // Ziegler-Nichols type auto tune rules
 // in tabular form
@@ -72,7 +72,7 @@ class PID
   
     // auto tune terminates if waiting too long between peaks or relay steps
     // set larger value for processes with long delays or time constants
-    static const unsigned long AUTOTUNE_MAX_WAIT = 5 * 60 * 1000; // 5 minutes    
+    static const unsigned long AUTOTUNE_MAX_WAIT = 5 * 60 * (unsigned long) 1000; // 5 minutes    
     
     // automatic or manual control
     static const byte MANUAL    = 0;
@@ -97,9 +97,9 @@ class PID
   
 #if defined AUTOTUNE_AMIGOF_PI  
       AMIGOF_PI,
-      LAST_AUTO_TUNE_METHOD = AMIGOF_PI
+      LAST_AUTOTUNE_METHOD = AMIGOF_PI
 #else  
-      LAST_AUTO_TUNE_METHOD = NO_OVERSHOOT_PID
+      LAST_AUTOTUNE_METHOD = NO_OVERSHOOT_PID
 #endif
 
     };
@@ -250,9 +250,6 @@ class PID
                                           
     void completeAutoTune();              // * set tunings and finish
 
-    double processValueOffset(double,     // * returns an estimate of the process value offset
-     double);                             //   as a proportion of the amplitude 
-                           
     byte ATuneModeRemember;
     ospDecimalValue<1> manualOutputRemember;
     
@@ -274,7 +271,6 @@ class PID
     ospDecimalValue<3> inputOffsetChange;
     ospDecimalValue<3> lastInputs[101];   // * process values, most recent in array element 0
     byte inputCount;
-    double inducedAmplitude;
     double Kp, Ti, Td;
 
 #if defined AUTOTUNE_AMIGOF_PI  
@@ -285,6 +281,8 @@ class PID
 #endif
   
 #if defined AUTOTUNE_RELAY_BIAS  
+    double processValueOffset(double,     // * returns an estimate of the process value offset
+      double);                            //   as a proportion of the amplitude 
     double relayBias;
     unsigned long lastStepTime[5];        // * step time, most recent in array element 0
     double sumInputSinceLastStep[5];      // * integrated process values, most recent in array element 0

@@ -298,10 +298,12 @@ static void __attribute__ ((noinline)) serialPrintlnFloatTemp(double val)
 
 }
 
+#if !defined (ATMEGA_32kB_FLASH)
 static void __attribute__ ((noinline)) serialPrintFAutotuner()
 {
   serialPrint(F("Auto-tuner "));
 }
+#endif
 
 static void __attribute__ ((noinline)) serialPrintFcolon()
 {
@@ -1121,7 +1123,7 @@ void processSerialCommand()
 
   case 'm': // select auto tune method
     // turn off auto tune
-    if ((i1 < 0) || (i1 > PID::LAST_AUTO_TUNE_METHOD))
+    if ((i1 < 0) || (i1 > PID::LAST_AUTOTUNE_METHOD))
     {
       goto out_EINV;
     }
