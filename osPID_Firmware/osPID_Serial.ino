@@ -151,7 +151,7 @@ or
 void setupSerial()
 {
   Serial.end();
-  Serial.begin(9600);
+  Serial.begin(baudrate);
 }
 
 static const char * parseDecimal(const char *str, long *out, byte *decimals)
@@ -504,7 +504,8 @@ static void cmdExamineSettings()
 
   Serial.println();
 
-  serialPrintln(F("Comm speed (bps): 9600"));
+  serialPrint(F("Comm speed (bps): "));
+  serialPrintln(baudrate);
 
   serialPrint(F("Power-on: "));
   switch (powerOnBehavior)
@@ -789,7 +790,7 @@ void processSerialCommand()
       serialPrintlnTemp(theInputDevice.getCalibration());
       break;
     case 'c':
-      serialPrintln("9600");
+      serialPrintln(baudrate);
       break;
     case 'D':
       serialPrintln(myPID.getDirection());
