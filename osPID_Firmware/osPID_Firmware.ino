@@ -323,11 +323,20 @@ void setup()
   // set up timer2 for buzzer interrupt
 #if !defined (SILENCE_BUZZER)
   cli();                   // disable interrupts
-  OCR2A = 249;              // set up timer2 CTC interrupts for buzzer
+  #if defined (__AVR_ATmega328P__)
+  OCR2A = 249;             // set up timer2 CTC interrupts for buzzer
   TCCR2A |= (1 << WGM21);  // CTC Mode
   TIMSK2 |= (1 << OCIE2A); // set interrupt on compare match
   GTCCR  |= (1 << PSRASY); // reset timer2 prescaler
   TCCR2B |= (7 << CS20);   // prescaler 1024
+  #elsif defined (__AVR_ATmega32U4__)
+  OCR3AH = 0;              // set up timer3 CTC interrupts for buzzer
+  OCR3AL = 249;            // set up timer3 CTC interrupts for buzzer
+  TCCR3A |= (1 << WGM32);  // CTC Mode
+  TIMSK3 |= (1 << OCIE3A); // set interrupt on compare match
+  GTCCR  |= (1 << PSRASY); // reset timer3 prescaler
+  TCCR3B |= (5 << CS30);   // prescaler 1024
+  #endif
   sei();                   // enable interrupts
 #endif  
 

@@ -72,15 +72,20 @@ static const bool unitsFahrenheit = false;
 // use simulator for input/output
 #undef USE_SIMULATOR
 
+// necessary omissions to compile on Atmega microcontrollers with 32 kB flash
+#if defined (__AVR_ATmega328P__) || defined (__AVR_ATmega32U4__)
+#define ATMEGA_32kB_FLASH
+#else
+#undef ATMEGA_32kB_FLASH
+#endif
+
 // omit serial processing commands for standalone controller
 // setting this option will compile a hex file several kB shorter
 #undef STANDALONE_CONTROLLER
 
-// necessary omissions to compile on Atmega microcontrollers with 32 kB flash
-#if defined (__AVR_ATmega328P__) || if defined (__AVR_ATmega32U4__)
-#define ATMEGA_32kB_FLASH
-#else
-#undef ATMEGA_32kB_FLASH
+// Leonardo bootloader is larger (4K) so we don't have room for serial communication
+#if defined (__AVR_ATmega32U4__)
+#define STANDALONE_CONTROLLER
 #endif
 
 // default serial communication speed (baud rate)
