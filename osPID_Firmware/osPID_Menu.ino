@@ -369,7 +369,7 @@ static bool __attribute__ ((noinline)) canEditDecimalItem(const byte index)
 
 static bool __attribute__ ((noinline)) canEditItem(byte item)
 {
-  bool canEdit = !myPID.isTuning();
+  bool canEdit = !myPID.isTuning;
 
   if (item < FIRST_DECIMAL_ITEM)
   {
@@ -625,7 +625,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     LCDprintln(PSTR("Reset Memory"));
     break;
   case ITEM_AUTOTUNE_CMD:
-    if (myPID.isTuning())
+    if (myPID.isTuning)
     {
       LCDprintln(PSTR("Cancel"));
     }
@@ -735,7 +735,7 @@ static void drawStatusFlash()
       ch = '!';
     }
   }
-  else if (myPID.isTuning() && (flashState > 0))
+  else if (myPID.isTuning && (flashState > 0))
   {
     if ((flashState & 1) > 0) 
     {
@@ -1043,7 +1043,7 @@ void updownKeyPress(bool up)
 #endif    
 
   // capture any possible changes to the output value if we're in MANUAL mode
-  if ((item == ITEM_OUTPUT) && (myPID.getMode() == PID::MANUAL) && !myPID.isTuning() && !tripped)
+  if ((item == ITEM_OUTPUT) && (myPID.getMode() == PID::MANUAL) && !myPID.isTuning && !tripped)
   {
     setOutputToManualOutput();
   }
@@ -1084,7 +1084,7 @@ void okKeyPress()
       {
         stopProfile();
       }
-      else if (!myPID.isTuning())
+      else if (!myPID.isTuning)
       {
         startProfile();
       }
@@ -1148,7 +1148,7 @@ void okKeyPress()
     {
       break;
     }
-    if (!myPID.isTuning())
+    if (!myPID.isTuning)
     {
       myPID.startAutoTune(aTuneMethod, aTuneStep, aTuneNoise, aTuneLookBack);
     }
@@ -1162,7 +1162,7 @@ void okKeyPress()
   case ITEM_PROFILE2:
   case ITEM_PROFILE3:
     activeProfileIndex = item - ITEM_PROFILE1;
-    if (!myPID.isTuning())
+    if (!myPID.isTuning)
     {
       startProfile();
     }

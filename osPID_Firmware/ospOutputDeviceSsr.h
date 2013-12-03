@@ -98,7 +98,7 @@ public:
   {
     if (index == 0) 
     {
-      return F("Output PWM cycle length in seconds");
+      return F("Output PWM cycle length (s)");
     }
     return NULL;
   }

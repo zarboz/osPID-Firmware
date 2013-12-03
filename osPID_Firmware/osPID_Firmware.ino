@@ -329,7 +329,7 @@ void setup()
   TIMSK2 |= (1 << OCIE2A); // set interrupt on compare match
   GTCCR  |= (1 << PSRASY); // reset timer2 prescaler
   TCCR2B |= (7 << CS20);   // prescaler 1024
-  #elsif defined (__AVR_ATmega32U4__)
+  #elif defined (__AVR_ATmega32U4__)
   OCR3AH = 0;              // set up timer3 CTC interrupts for buzzer
   OCR3AL = 249;            // set up timer3 CTC interrupts for buzzer
   TCCR3A |= (1 << WGM32);  // CTC Mode
@@ -605,7 +605,7 @@ void loop()
   
   // update the displayed output
   // unless in manual mode, in which case a new value may have been entered
-  if (myPID.isTuning() || (myPID.getMode() != PID::MANUAL))
+  if (myPID.isTuning || (myPID.getMode() != PID::MANUAL))
   {
     manualOutput = makeDecimal<1>(output);
   }

@@ -160,7 +160,7 @@ public:
     case 3:
       return F("Thermistor nominal resistance (Kohms)");
     case 4:
-      return F("Reference resistor value (Kohms)");
+      return F("Thermistor reference resistor value (Kohms)");
     case 5:
       return F("Thermistor B coefficient");
     case 6:

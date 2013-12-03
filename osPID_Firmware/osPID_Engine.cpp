@@ -25,25 +25,6 @@ extern ospDecimalValue<3> DGain;
 extern void markSettingsDirty();
 extern void setOutputToManualOutput();
 
-/*
-extern PID::PID(double* Input, double* Output, double* Setpoint,
-  ospDecimalValue<3> Kp = (ospDecimalValue<3>){ 1600 }, 
-  ospDecimalValue<3> Ki = (ospDecimalValue<3>){  200 }, 
-  ospDecimalValue<3> Kd = (ospDecimalValue<3>){    0 }, 
-  byte ControllerDirection = PID::DIRECT);
-
-extern void PID::autoTune(byte aTuneMethod = DEFAULT_METHOD, 
-  ospDecimalValue<1> aTuneStep  = (ospDecimalValue<1>){DEFAULT_OUTPUT_STEP}, 
-
-#if !defined (UNITS_FAHRENHEIT)
-  ospDecimalValue<3> aTuneNoise = makeDecimal<3>(DEFAULT_NOISE_BAND_CELSIUS),
-#else
-  ospDecimalValue<3> aTuneNoise = makeDecimal<3>(DEFAULT_NOISE_BAND_CELSIUS * 1.8),
-#endif 
- 
-  int aTuneLookback             = DEFAULT_LOOKBACK_SEC);
-*/
-
 
 // source of Tyreus-Luyben and Ciancone-Marlin rules:
 // "Autotuning of PID Controllers: A Relay Feedback Approach",
@@ -97,7 +78,7 @@ PID::PID(double* Input, double* Output, double* Setpoint,
 
   // initialize internal variables
   lastTime = millis() - (unsigned long) sampleTime;
-  tuning = false;
+  isTuning = false;
 }
  
 /* compute() **********************************************************************
@@ -116,13 +97,13 @@ void PID::compute()
   }
   lastTime = now;
   
-  if (tuning)
+  if (isTuning)
   {
     // run auto tuner
     bool finishedTuning = autoTune();
     if (finishedTuning)
     {
-      tuning = false;
+      isTuning = false;
       completeAutoTune();
     }
     return;
@@ -291,7 +272,6 @@ ospDecimalValue<3> PID::getKi() { return dispKi; }
 ospDecimalValue<3> PID::getKd() { return dispKd; }
 byte PID::getMode() { return mode; }
 byte PID::getDirection() { return controllerDirection; }
-bool PID::isTuning() { return tuning; }
 
  /*******************************************************************************
  *
@@ -403,7 +383,7 @@ void PID::startAutoTune(byte aTuneMethod, ospDecimalValue<1> aTuneStep,
   
   // initialize auto tune
   mode = MANUAL;
-  tuning = true;
+  isTuning = true;
   state = AUTOTUNE_OFF;
 }
 
@@ -448,7 +428,7 @@ void PID::stopAutoTune()
 {
   // stop auto tune
   state = AUTOTUNE_OFF;
-  tuning = false;
+  isTuning = false;
   mode = ATuneModeRemember;
 
   // restore the output to the last manual command; it will be overwritten by the PID
@@ -464,6 +444,11 @@ void PID::stopAutoTune()
  *
  *
  *******************************************************************************/
+ 
+bool PID::zero(double x)
+{
+  return (x < 1e-10);
+}
 
 bool PID::autoTune()
 {
@@ -547,7 +532,7 @@ bool PID::autoTune()
       // don't need to divide by 2 to get the average, we are interested in the ratio
       double avgStep1 = (double) ((lastStepTime[0] - lastStepTime[1]) + (lastStepTime[2] - lastStepTime[3]));
       double avgStep2 = (double) ((lastStepTime[1] - lastStepTime[2]) + (lastStepTime[3] - lastStepTime[4]));
-      if ((avgStep1 > 1e-10) && (avgStep2 > 1e-10))
+      if (!zero(avgStep1) && !zero(avgStep2))
       {
         double asymmetry = (avgStep1 > avgStep2) ?
                            (avgStep1 - avgStep2) / avgStep1 : (avgStep2 - avgStep1) / avgStep2;
@@ -745,7 +730,7 @@ bool PID::autoTune()
 #endif
 
       // bad estimate of process gain
-      if (K_process < 1e-10) // zero
+      if (zero(K_process))
       {
         state = AUTOTUNE_FAILED;
         return false;
@@ -1069,11 +1054,11 @@ double PID::processValueOffset(double avgStep1, double avgStep2)
   // that is stationary over the last 2 relay cycles
   // needs constant phase lag, so recent changes to noiseBand are bad 
       
-  if (avgStep1 < 1e-10)
+  if (zero(avgStep1))
   {
     return 1.0;
   }
-  if (avgStep2 < 1e-10)
+  if (zero(avgStep2))
   {
     return -1.0;
   }
@@ -1087,11 +1072,11 @@ double PID::processValueOffset(double avgStep1, double avgStep2)
 
   double s1 = (sumInputSinceLastStep[1] + sumInputSinceLastStep[3]);
   double s2 = (sumInputSinceLastStep[2] + sumInputSinceLastStep[4]);
-  if (s1 < 1e-10)
+  if (zero(s1))
   {
     return 1.0;
   }
-  if (s2 < 1e-10)
+  if (zero(s2))
   {
     return -1.0;
   }
@@ -1140,7 +1125,7 @@ double PID::processValueOffset(double avgStep1, double avgStep2)
 
   // estimate offset as proportion of amplitude
   double discriminant = (1.0 - r2) * (pow(r1, 2) - r2);
-  if (discriminant < 1e-10)
+  if (zero(discriminant))
   {
     // catch negative values
     discriminant = 0.0;
@@ -1148,7 +1133,7 @@ double PID::processValueOffset(double avgStep1, double avgStep2)
 
   // return estimated process value offset
   return ((1.0 + r1) * (1.0 - r2) + ((r1 > 1.0) ? 1.0 : -1.0) * sqrt(discriminant)) / 
-         (r1 * r2 + 3.0 * r1 + 3.0 * r2 + 1.0);
+         (r1 * r2 + 3.0 * (r1 + r2 ) + 1.0);
 } 
 #endif // if defined (AUTOTUNE_RELAY_BIAS)
 

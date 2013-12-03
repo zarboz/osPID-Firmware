@@ -209,7 +209,7 @@ class PID
     ospDecimalValue<3> getKd();           // where it's important to know what is actually 
     byte getMode();			  // inside the PID.
     byte getDirection();		  //
-    bool isTuning();                      //
+    bool isTuning;
 										  
   // private variables and methods **********************************************************************
 
@@ -232,8 +232,6 @@ class PID
     double *myOutput;                     //   This creates a hard link between the variables and the 
     double *mySetpoint;                   //   PID, freeing the user from having to constantly tell us
                                           //   what these values are.  with pointers we'll just know.
-			  
-    bool tuning;                          // * flag whether auto tune is running for this PID
 
     byte mode;                            // * automatic or manual control
 
@@ -249,6 +247,8 @@ class PID
                                           //   returns true when done, otherwise returns false
                                           
     void completeAutoTune();              // * set tunings and finish
+    
+    bool zero(double);
 
     byte ATuneModeRemember;
     ospDecimalValue<1> manualOutputRemember;

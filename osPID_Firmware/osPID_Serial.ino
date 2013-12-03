@@ -49,9 +49,6 @@ Command list:
 
   d? #Number -- set D gain
 
-  E #String -- Execute the profile of the given name
-    FIXME can get rid of this command if we are short of space
-
   I? #Number -- set Input value
 
   i? #Number -- set I gain
@@ -109,6 +106,8 @@ Command list:
   
   
 Codes removed on Arduinos with 32kB flash memory:
+
+  E #String -- Execute the profile of the given name
 
   K #Integer -- peeK at memory address, +ve number = SRAM, -ve number = EEPROM; returns
   the byte value in hexadecimal
@@ -664,7 +663,11 @@ PROGMEM SerialCommandParseData commandParseData[] =
   { 'B', ARGS_ONE_NUMBER | ARGS_FLAG_QUERYABLE },
   { 'C', ARGS_NONE },
   { 'D', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
+  
+#if !defined (ATMEGA_32kB_FLASH)  
   { 'E', ARGS_STRING },
+#endif  
+
   { 'I', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   { 'J', ARGS_ONE_NUMBER | ARGS_FLAG_NONNEGATIVE | ARGS_FLAG_QUERYABLE },
   
@@ -777,7 +780,7 @@ void processSerialCommand()
     switch (serialCommandBuffer[0])
     {
     case 'A':
-      serialPrintln(myPID.isTuning());
+      serialPrintln(myPID.isTuning);
       break;
     case 'a':
       serialPrint(aTuneStep);
@@ -984,7 +987,7 @@ void processSerialCommand()
   switch (serialCommandBuffer[0])
   {
   case 'A': // stop/start auto-tuner
-    if ((myPID.isTuning() ^ (byte) i1) == 0) // autotuner already on/off
+    if ((myPID.isTuning ^ (byte) i1) == 0) // autotuner already on/off
     {
       goto out_ACK; // no EEPROM writeback needed
     }
@@ -1036,7 +1039,7 @@ void processSerialCommand()
     break;
 
   case 'd': // set the D gain
-    if (myPID.isTuning())
+    if (myPID.isTuning)
     {
       goto out_EMOD;
     }
@@ -1045,9 +1048,10 @@ void processSerialCommand()
       goto out_EINV;
     }
     break;
-
+    
+#if !defined (ATMEGA_32kB_FLASH)
   case 'E': // execute a profile by name
-    if (myPID.isTuning() || runningProfile)
+    if (myPID.isTuning || runningProfile)
     {
       goto out_EMOD;
     }  
@@ -1057,9 +1061,10 @@ void processSerialCommand()
     }
     myPID.setMode(PID::AUTOMATIC);
     goto out_ACK; // no EEPROM writeback needed
+#endif    
 
   case 'e': // execute a profile by number
-    if (myPID.isTuning() || runningProfile || (myPID.getMode() != PID::AUTOMATIC))
+    if (myPID.isTuning || runningProfile || (myPID.getMode() != PID::AUTOMATIC))
     {
       goto out_EMOD;
     }
@@ -1071,7 +1076,7 @@ void processSerialCommand()
     goto out_EMOD; // (I don't think so)
 
   case 'i': // set the I gain
-    if (myPID.isTuning())
+    if (myPID.isTuning)
     {
       goto out_EMOD;
     }
@@ -1128,7 +1133,7 @@ void processSerialCommand()
     {
       goto out_EINV;
     }
-    if (myPID.isTuning())
+    if (myPID.isTuning)
     {
       myPID.stopAutoTune();
     }
@@ -1152,7 +1157,7 @@ void processSerialCommand()
       {
         goto out_EINV;
       }
-      if (myPID.isTuning() || runningProfile || (myPID.getMode() == PID::AUTOMATIC))
+      if (myPID.isTuning || runningProfile || (myPID.getMode() == PID::AUTOMATIC))
       {
         goto out_EMOD;
       }
@@ -1177,7 +1182,7 @@ void processSerialCommand()
     break;
 
   case 'p': // set the P gain
-    if (myPID.isTuning())
+    if (myPID.isTuning)
     {
       goto out_EMOD;
     }
@@ -1192,7 +1197,7 @@ void processSerialCommand()
     goto out_ACK; // no EEPROM writeback needed
 
   case 'R': // run a profile by number
-    if (myPID.isTuning() || runningProfile)
+    if (myPID.isTuning || runningProfile)
     {
       goto out_EMOD;
     }
@@ -1212,7 +1217,7 @@ void processSerialCommand()
 
   case 'S': // change the setpoint
     {
-      if (myPID.isTuning())
+      if (myPID.isTuning)
       {
         goto out_EMOD;
       }
