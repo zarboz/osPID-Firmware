@@ -3,6 +3,7 @@
  * 
  * original Arduino libraries by Brett Beauregard <br3ttb@gmail.com> brettbeauregard.com
  * adapted by Tom Price <magicsmoke@tomprice.net> http://smokedprojects.blogspot.com
+ * Modified by Bryan Smith for standalone PID in use for heating coil application with k type thermocouple
  *
  * This Library is licensed under a GPLv3 License
  **********************************************************************************************/

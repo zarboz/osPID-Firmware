@@ -10,8 +10,8 @@
  ********************************************/
 
 // the controller name displayed in the startup banner and the identifY response
-static const char CONTROLLER_NAME[] = "Stripboard_osPID";
-PROGMEM const char PcontrollerName[] = "Stripboard_osPID";
+static const char CONTROLLER_NAME[] = "DabPer_Enail";
+PROGMEM const char PcontrollerName[] = "DabPer_Enail";
 
 // the version tag displayed in the startup banner and the identifY response
 static const char VERSION_TAG[] = "v1.0";
@@ -62,7 +62,7 @@ static const byte buzzerPin           = A5;
 //    saved on the EEPROM -- set points, calibration values,
 //    trip limits, and profile settings -- will not be upated
 //    if this setting is changed.
-#define UNITS_FAHRENHEIT
+#define UNITS_FAHRENHEIT  // we will need to use this flag for US distributed units and #undef it for UK units or units that use metric measurements
 #if defined (UNITS_FAHRENHEIT)
 static const bool unitsFahrenheit = true;
 #else
