@@ -24,12 +24,18 @@ PROGMEM const char Pversion[] = "v1.0";
  ********************************************/
 
 // pin assignment for LCD display
-static const byte lcdRsPin     = 2; 
-static const byte lcdEnablePin = 3; 
-static const byte lcdD0Pin     = 7; 
-static const byte lcdD1Pin     = 6; 
-static const byte lcdD2Pin     = 5; 
-static const byte lcdD3Pin     = 4;
+static const byte lcdRsPin     = 7; 
+static const byte lcdEnablePin = 8; 
+static const byte lcdD4Pin     = 9; 
+static const byte lcdD5Pin     = 10; 
+static const byte lcdD6Pin     = 11; 
+static const byte lcdD7Pin     = 12;
+static const byte lcdREDPin    = 3;
+static const byte lcdGRNPin    = 5;
+static const byte lcdBLUPin    = 6;
+//misc LCD shit
+static const int  brightness   = 255;
+
 
 // pin assignments for input devices 
 static const byte thermistorPin       = A0;
@@ -54,7 +60,7 @@ static const byte buzzerPin           = A5;
  ********************************************/
 
 // quiet mode (buzzer off) 
-#undef SILENCE_BUZZER
+#define SILENCE_BUZZER
 
 // use Fahrenheit temperature units
 // NB This option only changes the units for the
@@ -81,7 +87,7 @@ static const bool unitsFahrenheit = false;
 
 // omit serial processing commands for standalone controller
 // setting this option will compile a hex file several kB shorter
-#undef STANDALONE_CONTROLLER
+#define STANDALONE_CONTROLLER
 
 // Leonardo bootloader is larger (4K) so we don't have room for serial communication
 #if defined (__AVR_ATmega32U4__)

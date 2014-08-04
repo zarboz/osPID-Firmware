@@ -56,6 +56,7 @@
 
 #include <Arduino.h>
 #include <LiquidCrystal.h>
+#include <Wire.h>
 #include <avr/pgmspace.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -341,7 +342,7 @@ void setup()
 #endif  
 
   // set up the LCD,show controller name
-  theLCD.begin(16, 2);
+  lcd.begin(16, 2);
   drawStartupBanner();
 
   lcdTime = 25;
