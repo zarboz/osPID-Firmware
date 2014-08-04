@@ -68,8 +68,8 @@ static const byte buzzerPin           = A5;
 //    saved on the EEPROM -- set points, calibration values,
 //    trip limits, and profile settings -- will not be upated
 //    if this setting is changed.
-#define UNITS_FAHRENHEIT  // we will need to use this flag for US distributed units and #undef it for UK units or units that use metric measurements
-#if defined (UNITS_FAHRENHEIT)
+//    Possibly will move this back to menu selection instead of making it a program switch
+#define UNITS_FAHRENHEIT  
 static const bool unitsFahrenheit = true;
 #else
 static const bool unitsFahrenheit = false;
