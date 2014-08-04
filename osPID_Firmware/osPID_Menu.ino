@@ -322,7 +322,8 @@ static void __attribute__ ((noinline)) LCDsetCursorBottomLeft()
   lcd.setCursor(0, 1);
 }
 //LED normalization code to prevent red from overpowering other colors
-//testing code
+//testing code right now uncommenting would result in "swirl" of rgb colors
+// the entire time LCD was "on"
 //void setBacklight(uint8_t r, uint8_t g, uint8_t b) {
   // normalize the red LED - its brighter than the rest!
 //  r = map(r, 0, 255, 0, 100);
@@ -339,9 +340,10 @@ static void __attribute__ ((noinline)) LCDsetCursorBottomLeft()
  // Serial.print("R = "); Serial.print(r, DEC);
  // Serial.print(" G = "); Serial.print(g, DEC);
  // Serial.print(" B = "); Serial.println(b, DEC);
-  //analogWrite(REDLITE, r);
-  //analogWrite(GREENLITE, g);
-  //analogWrite(BLUELITE, b);
+  //analogWrite(lcdREDPin, r);
+  //analogWrite(lcdGRNPin, g);
+  //analogWrite(lcdBLUPin, b);
+// }
 
 // draw the initial startup banner
 void drawStartupBanner()
