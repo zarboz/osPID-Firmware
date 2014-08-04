@@ -19,23 +19,23 @@ void ospBugCheck(const char *block, int line)
 {
   // note that block is expected to be PROGMEM
 
-  lcd.noCursor();
+  theLCD.noCursor();
     
-  lcd.clear();
+  theLCD.clear();
   for (int i = 0; i < 4; i++)
-    lcd.print((char) pgm_read_byte_near(&block[i]));
-  lcd.print(F(" Err"));
+    theLCD.print((char) pgm_read_byte_near(&block[i]));
+  theLCD.print(F(" Err"));
 
-  lcd.setCursor(0, 1);
-  lcd.print(F("Line "));
-  lcd.print(line);
+  theLCD.setCursor(0, 1);
+  theLCD.print(F("Line "));
+  theLCD.print(line);
 
   // just lock up, flashing the error message
   while (true)
   {
-    lcd.display();
+    theLCD.display();
     delay(500);
-    lcd.noDisplay();
+    theLCD.noDisplay();
     delay(500);
   }
 }

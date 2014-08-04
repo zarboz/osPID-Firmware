@@ -296,7 +296,7 @@ int pow10(byte n)
 void __attribute__ ((noinline)) LCDspc(byte n)
 {
   for (byte i = n; i > 0; i--)
-    lcd.print(' ');
+    theLCD.print(' ');
 }
 
 // print text from PROGMEM to LCD and fill in with blanks to the end of the line 
@@ -306,7 +306,7 @@ void __attribute__ ((noinline)) LCDprintln(const char* s)
   byte i = 16;
   while ((c = (char) pgm_read_byte_near(s++)) && (i > 0))
   {
-    lcd.print(c);
+    theLCD.print(c);
     i--;
   }
   LCDspc(i);
@@ -314,23 +314,47 @@ void __attribute__ ((noinline)) LCDprintln(const char* s)
 
 static void __attribute__ ((noinline)) LCDsetCursorTopLeft()
 {
-  lcd.setCursor(0, 0);
+  theLCD.setCursor(0, 0);
 }
 
 static void __attribute__ ((noinline)) LCDsetCursorBottomLeft()
 {
-  lcd.setCursor(0, 1);
+  theLCD.setCursor(0, 1);
 }
+//LED normalization code to prevent red from overpowering other colors
+//testing code
+//void setBacklight(uint8_t r, uint8_t g, uint8_t b) {
+  // normalize the red LED - its brighter than the rest!
+//  r = map(r, 0, 255, 0, 100);
+ // g = map(g, 0, 255, 0, 150);
+ 
+//  r = map(r, 0, 255, 0, brightness);
+//  g = map(g, 0, 255, 0, brightness);
+//  b = map(b, 0, 255, 0, brightness);
+ 
+  // common anode so invert!
+//  r = map(r, 0, 255, 255, 0);
+ // g = map(g, 0, 255, 255, 0);
+ // b = map(b, 0, 255, 255, 0);
+ // Serial.print("R = "); Serial.print(r, DEC);
+ // Serial.print(" G = "); Serial.print(g, DEC);
+ // Serial.print(" B = "); Serial.println(b, DEC);
+  //analogWrite(REDLITE, r);
+  //analogWrite(GREENLITE, g);
+  //analogWrite(BLUELITE, b);
 
 // draw the initial startup banner
 void drawStartupBanner()
 {
   // display a startup message
-  lcd.clear();
+  theLCD.clear();
   LCDsetCursorTopLeft();
   LCDprintln(PcontrollerName);
   LCDsetCursorBottomLeft();
   LCDprintln(Pversion);
+  pinMode(lcdREDPin, OUTPUT);
+  pinMode(lcdGRNPin, OUTPUT);
+  pinMode(lcdBLUPin, OUTPUT);
   
 #if !defined (SILENCE_BUZZER)
   // buzzMillis(10);
@@ -344,7 +368,7 @@ static void drawProfileName(byte profileIndex)
   for (byte i = 0; i < 15; i++)
   {
     char ch = getProfileNameCharAt(profileIndex, i);
-    lcd.print(ch ? ch : ' ');
+    theLCD.print(ch ? ch : ' ');
   }
 }
 
@@ -398,14 +422,14 @@ static void __attribute__ ((noinline)) startEditing(byte item)
 
   if (canEditItem(item))
   {
-    lcd.cursor();
+    theLCD.cursor();
   }
 }
 
 static void __attribute__ ((noinline)) stopEditing()
 {
   menuState.editing = false;
-  lcd.noCursor();
+  theLCD.noCursor();
 }
 
 // draw the selector character at the current position
@@ -413,7 +437,7 @@ static void __attribute__ ((noinline)) drawSelector(byte item, bool selected)
 {
   if (!selected)
   {
-    lcd.print(' ');
+    theLCD.print(' ');
     return;
   }
 
@@ -427,11 +451,11 @@ static void __attribute__ ((noinline)) drawSelector(byte item, bool selected)
 
   if (menuState.editing)
   {
-    lcd.print(canEdit ? char(126) : 'X'); // char(126) = arrow pointing right
+    theLCD.print(canEdit ? char(126) : 'X'); // char(126) = arrow pointing right
   }
   else
   {
-    lcd.print(canEdit ? '>' : '|');
+    theLCD.print(canEdit ? '>' : '|');
   }
 }
 
@@ -445,10 +469,10 @@ static void drawHalfRowItem(byte row, byte col, bool selected, byte item)
   case ITEM_SETPOINT2:
   case ITEM_SETPOINT3:
   case ITEM_SETPOINT4: 
-    lcd.setCursor(col, row);
+    theLCD.setCursor(col, row);
     drawSelector(item, selected);
-    lcd.print(F("Sv")); 
-    lcd.print(char('1' + item - ITEM_SETPOINT1));
+    theLCD.print(F("Sv")); 
+    theLCD.print(char('1' + item - ITEM_SETPOINT1));
     LCDspc(col == 0 ? 1 : 7);
     break;
   default:
@@ -540,14 +564,14 @@ static void drawDecimalValue(byte item)
   for (byte i = 0; i < lastDigitPosition; i++ )
   {
     c = buffer[i];
-    lcd.print((c == 0) ? ' ' : c);
+    theLCD.print((c == 0) ? ' ' : c);
   }
 }
 
 // draw an item occupying a full 8x1 display line
 static void drawFullRowItem(byte row, bool selected, byte item)
 {
-  lcd.setCursor(0, row);
+  theLCD.setCursor(0, row);
 
   // first draw the selector
   drawSelector(item, selected);
@@ -570,17 +594,17 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     case ITEM_LOWER_TRIP_LIMIT:
     case ITEM_UPPER_TRIP_LIMIT:
 #if !defined (UNITS_FAHRENHEIT)
-      lcd.print(F(" \337C"));
+      theLCD.print(F(" \337C"));
 #else
-      lcd.print(F(" \337F"));
+      theLCD.print(F(" \337F"));
 #endif
       spc--;
       break;
     case ITEM_WINDOW_LENGTH:
-      lcd.print(F(" s"));
+      theLCD.print(F(" s"));
       break;
     case ITEM_OUTPUT:
-      lcd.print(F(" %"));
+      theLCD.print(F(" %"));
     default:
       spc = 15 - lastDigitPosition;
     }
@@ -827,13 +851,13 @@ void __attribute__ ((noinline)) drawNotificationCursor(char icon)
 
   if (icon)
   {
-    lcd.setCursor(col, row);
-    lcd.print(icon);
+    theLCD.setCursor(col, row);
+    theLCD.print(icon);
   }
 
   if (menuState.editing)
   {
-    lcd.setCursor(menuState.editDepth, row);
+    theLCD.setCursor(menuState.editDepth, row);
   }
 }
 
@@ -1286,8 +1310,8 @@ void drawBadCsum(byte profile)
   else
   {
     LCDprintln(Pprofile);
-    lcd.setCursor(8, 0);
-    lcd.print(char(profile + '1'));
+    theLCD.setCursor(8, 0);
+    theLCD.print(char(profile + '1'));
   }
   LCDsetCursorBottomLeft();
   LCDprintln(PSTR("Cleared"));

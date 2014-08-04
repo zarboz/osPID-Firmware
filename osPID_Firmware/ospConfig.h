@@ -14,8 +14,8 @@ static const char CONTROLLER_NAME[] = "DabPer_Enail";
 PROGMEM const char PcontrollerName[] = "DabPer_Enail";
 
 // the version tag displayed in the startup banner and the identifY response
-static const char VERSION_TAG[] = "v1.0";
-PROGMEM const char Pversion[] = "v1.0";
+static const char VERSION_TAG[] = "By Dabper and friends";
+PROGMEM const char Pversion[] = "By Dabper and friends";
 
 /********************************************
  *
