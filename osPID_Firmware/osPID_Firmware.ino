@@ -127,7 +127,7 @@ enum
 };
 
 // we use the LiquidCrystal library to drive the LCD screen
-LiquidCrystal theLCD(lcdRsPin, lcdEnablePin, lcdD4Pin, lcdD5Pin, lcdD6Pin, lcdD7Pin);
+LiquidCrystal lcd(lcdRsPin, lcdEnablePin, lcdD4Pin, lcdD5Pin, lcdD6Pin, lcdD7Pin);
 
 // our AnalogButton library provides debouncing and interpretation
 // of the analog-multiplexed button channel
@@ -342,7 +342,7 @@ void setup()
 #endif  
 
   // set up the LCD,show controller name
-  theLCD.begin(16, 2);
+  lcd.begin(16, 2);
   drawStartupBanner();
 
   lcdTime = 25;
