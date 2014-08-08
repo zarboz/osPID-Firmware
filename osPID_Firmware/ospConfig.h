@@ -34,7 +34,7 @@ static const byte lcdREDPin    = 3;
 static const byte lcdGRNPin    = 5;
 static const byte lcdBLUPin    = 6;
 //misc LCD shit
-static const int  brightness   = 255;
+static int  brightness   = 255;
 
 
 // pin assignments for input devices 
@@ -71,9 +71,6 @@ static const byte buzzerPin           = A5;
 //    Possibly will move this back to menu selection instead of making it a program switch
 #define UNITS_FAHRENHEIT  
 static const bool unitsFahrenheit = true;
-#else
-static const bool unitsFahrenheit = false;
-#endif
 
 // use simulator for input/output
 #undef USE_SIMULATOR

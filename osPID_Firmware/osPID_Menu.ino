@@ -324,26 +324,26 @@ static void __attribute__ ((noinline)) LCDsetCursorBottomLeft()
 //LED normalization code to prevent red from overpowering other colors
 //testing code right now uncommenting would result in "swirl" of rgb colors
 // the entire time LCD was "on"
-//void setBacklight(uint8_t r, uint8_t g, uint8_t b) {
+void setBacklight(uint8_t r, uint8_t g, uint8_t b) {
   // normalize the red LED - its brighter than the rest!
-//  r = map(r, 0, 255, 0, 100);
- // g = map(g, 0, 255, 0, 150);
+  r = map(r, 0, 255, 0, 100);
+  g = map(g, 0, 255, 0, 150);
  
-//  r = map(r, 0, 255, 0, brightness);
-//  g = map(g, 0, 255, 0, brightness);
-//  b = map(b, 0, 255, 0, brightness);
+  r = map(r, 0, 255, 0, brightness);
+  g = map(g, 0, 255, 0, brightness);
+  b = map(b, 0, 255, 0, brightness);
  
   // common anode so invert!
-//  r = map(r, 0, 255, 255, 0);
- // g = map(g, 0, 255, 255, 0);
- // b = map(b, 0, 255, 255, 0);
- // Serial.print("R = "); Serial.print(r, DEC);
- // Serial.print(" G = "); Serial.print(g, DEC);
- // Serial.print(" B = "); Serial.println(b, DEC);
-  //analogWrite(lcdREDPin, r);
-  //analogWrite(lcdGRNPin, g);
-  //analogWrite(lcdBLUPin, b);
-// }
+  r = map(r, 0, 255, 255, 0);
+  g = map(g, 0, 255, 255, 0);
+  b = map(b, 0, 255, 255, 0);
+  Serial.print("R = "); Serial.print(r, DEC);
+  Serial.print(" G = "); Serial.print(g, DEC);
+  Serial.print(" B = "); Serial.println(b, DEC);
+  analogWrite(lcdREDPin, r);
+  analogWrite(lcdGRNPin, g);
+  analogWrite(lcdBLUPin, b);
+ }
 
 // draw the initial startup banner
 void drawStartupBanner()

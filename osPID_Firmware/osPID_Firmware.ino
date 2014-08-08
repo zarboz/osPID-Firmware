@@ -344,7 +344,25 @@ void setup()
   // set up the LCD,show controller name
   lcd.begin(16, 2);
   drawStartupBanner();
-
+  pinMode(lcdREDPin, OUTPUT);
+  pinMode(lcdGRNPin, OUTPUT);
+  pinMode(lcdBLUPin, OUTPUT);
+  
+  brightness = 200;
+  
+  for (int i = 0; i < 255; i++) {
+    setBacklight(i, 0, 255-i);
+    delay(5);
+  }
+  for (int i = 0; i < 255; i++) {
+    setBacklight(255-i, i, 0);
+    delay(5);
+  }
+  for (int i = 0; i < 255; i++) {
+    setBacklight(0, 255-i, i);
+    delay(5);
+  }
+  
   lcdTime = 25;
   updateTimer();
 
