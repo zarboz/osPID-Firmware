@@ -24,7 +24,7 @@ Adafruit_MAX31855::Adafruit_MAX31855(int8_t SCLK, int8_t CS, int8_t MISO) {
   sclk = SCLK;
   cs = CS;
   miso = MISO;
-123213
+
   //define pin modes
   pinMode(cs, OUTPUT);
   pinMode(sclk, OUTPUT); 
@@ -96,7 +96,7 @@ double Adafruit_MAX31855::readCelsius(void) {
 uint8_t Adafruit_MAX31855::readError() {
   return spiread32() & 0x7;
 }
-
+123
 double Adafruit_MAX31855::readFarenheit(void) {
   float f = readCelsius();
   f *= 9.0;
