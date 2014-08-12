@@ -344,12 +344,18 @@ void setup()
   // set up the LCD,show controller name
   lcd.begin(16, 2);
   drawStartupBanner();
+  
+  //Color swirl on bootup
   pinMode(lcdREDPin, OUTPUT);
   pinMode(lcdGRNPin, OUTPUT);
   pinMode(lcdBLUPin, OUTPUT);
   
+  //I like red as static background color
+  pinMode(lcdREDPin, OUTPUT);
+  
   brightness = 200;
   
+//Code to correct the red color from overpowering the other RGB colors  
   for (int i = 0; i < 255; i++) {
     setBacklight(i, 0, 255-i);
     delay(5);

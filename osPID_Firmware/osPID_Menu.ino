@@ -354,9 +354,10 @@ void drawStartupBanner()
   LCDprintln(PcontrollerName);
   LCDsetCursorBottomLeft();
   LCDprintln(Pversion);
-  pinMode(lcdREDPin, OUTPUT);
-  pinMode(lcdGRNPin, OUTPUT);
-  pinMode(lcdBLUPin, OUTPUT);
+  // initial color swirl code to be deleted later
+  //pinMode(lcdREDPin, OUTPUT);
+  //pinMode(lcdGRNPin, OUTPUT);
+  //pinMode(lcdBLUPin, OUTPUT);
   
 #if !defined (SILENCE_BUZZER)
   // buzzMillis(10);
