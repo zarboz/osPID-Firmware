@@ -239,8 +239,8 @@ public:
       temperature = oneWireDevice.getTempCByIndex(0);
       break;
     case INPUT_THERMOCOUPLE: 
-      temperature = thermocouple.readThermocouple(CELSIUS);
-      if ((temperature == FAULT_OPEN) || (temperature = FAULT_SHORT_GND) || (temperature == FAULT_SHORT_VCC))
+      temperature = thermocouple.readCelsius();
+      if (isnan(temperature))
         return NAN;
       break;
     default:

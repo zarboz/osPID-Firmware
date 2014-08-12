@@ -24,7 +24,7 @@ Adafruit_MAX31855::Adafruit_MAX31855(int8_t SCLK, int8_t CS, int8_t MISO) {
   sclk = SCLK;
   cs = CS;
   miso = MISO;
-
+123213
   //define pin modes
   pinMode(cs, OUTPUT);
   pinMode(sclk, OUTPUT); 
