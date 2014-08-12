@@ -127,7 +127,7 @@ enum
 };
 
 // we use the LiquidCrystal library to drive the LCD screen
-LiquidCrystal lcd(lcdRsPin, lcdEnablePin, lcdD4Pin, lcdD5Pin, lcdD6Pin, lcdD7Pin);
+LiquidCrystal lcd(lcdRsPin, lcdEnablePin, lcdD0Pin, lcdD1Pin, lcdD2Pin, lcdD3Pin);
 
 // our AnalogButton library provides debouncing and interpretation
 // of the analog-multiplexed button channel
@@ -362,7 +362,7 @@ void setup()
     setBacklight(0, 255-i, i);
     delay(5);
   }
-  
+
   lcdTime = 25;
   updateTimer();
 

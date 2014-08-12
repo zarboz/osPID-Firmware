@@ -24,15 +24,16 @@ PROGMEM const char Pversion[] = "By Dabper and friends";
  ********************************************/
 
 // pin assignment for LCD display
-static const byte lcdRsPin     = 7; 
-static const byte lcdEnablePin = 8; 
-static const byte lcdD4Pin     = 9; 
-static const byte lcdD5Pin     = 10; 
-static const byte lcdD6Pin     = 11; 
-static const byte lcdD7Pin     = 12;
-static const byte lcdREDPin    = 3;
-static const byte lcdGRNPin    = 5;
-static const byte lcdBLUPin    = 6;
+static const byte lcdRsPin     = 2; 
+static const byte lcdEnablePin = 3; 
+static const byte lcdD0Pin     = 7; 
+static const byte lcdD1Pin     = 6; 
+static const byte lcdD2Pin     = 5; 
+static const byte lcdD3Pin     = 4;
+static const byte lcdREDPin    = 9;
+static const byte lcdGRNPin    = 10;
+static const byte lcdBLUPin    = 11;
+
 //misc LCD shit
 static int  brightness   = 255;
 
