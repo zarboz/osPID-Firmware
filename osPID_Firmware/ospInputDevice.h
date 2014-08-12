@@ -5,7 +5,7 @@
 #include "ospSettingsHelper.h"
 #include "OneWire_local.h"
 #include "DallasTemperature_local.h"
-#include "MAX31855_local.h"
+#include "Adafruit_MAX31855.h"
 
 // class using crude switches 
 // instead of pretty virtual methods
@@ -45,7 +45,7 @@ private:
   DallasTemperature oneWireDevice;
   DeviceAddress oneWireDeviceAddress;
 
-  MAX31855 thermocouple;
+  Adafruit_MAX31855 thermocouple;
 
   // convert the thermistor voltage to a temperature
   double thermistorVoltageToTemperature(int voltage)
