@@ -1,230 +1,175 @@
-/*******************************************************************************
-* MAX31855 Library
-* Version: 1.10
-* Date: 24-07-2012
-* Company: Rocket Scream Electronics
-* Website: www.rocketscream.com
-*
-* This is a MAX31855 library for Arduino. Please check our wiki 
-* (www.rocketscream.com/wiki) for more information on using this piece of 
-* library.
-*
-* This library is licensed under Creative Commons Attribution-ShareAlike 3.0 
-* Unported License.
-*
-* Revision  Description
-* ========  ===========
-* 1.10			Added negative temperature support for both junction & thermocouple.
-* 1.00      Initial public release.
-*
-*******************************************************************************/
-#include	"MAX31855_local.h"
+/*************************************************** 
+  This is a library for the Adafruit Thermocouple Sensor w/MAX31855K
 
-MAX31855::MAX31855(unsigned char SO, unsigned	char CS, unsigned char SCK)
-{
-	so = SO;
-	cs = CS;
-	sck = SCK;
-	
-	// MAX31855 data output pin
-	pinMode(so, INPUT);
-	// MAX31855 chip select input pin
-	pinMode(cs, OUTPUT);
-	// MAX31855 clock input pin
-	pinMode(sck, OUTPUT);
-	
-	// Default output pins state
-	digitalWrite(cs, HIGH);
-	digitalWrite(sck, LOW);
+  Designed specifically to work with the Adafruit Thermocouple Sensor
+  ----> https://www.adafruit.com/products/269
+
+  These displays use SPI to communicate, 3 pins are required to  
+  interface
+  Adafruit invests time and resources providing this open source code, 
+  please support Adafruit and open-source hardware by purchasing 
+  products from Adafruit!
+
+  Written by Limor Fried/Ladyada for Adafruit Industries.  
+  BSD license, all text above must be included in any redistribution
+ ****************************************************/
+
+#include "MAX31855_local.h"
+#include <avr/pgmspace.h>
+#include <util/delay.h>
+#include <stdlib.h>
+#include <SPI.h>
+
+
+Adafruit_MAX31855::Adafruit_MAX31855(int8_t SCLK, int8_t CS, int8_t MISO) {
+  sclk = SCLK;
+  cs = CS;
+  miso = MISO;
+  hSPI = 0;
+
+  //define pin modes
+  pinMode(cs, OUTPUT);
+  pinMode(sclk, OUTPUT); 
+  pinMode(miso, INPUT);
+
+  digitalWrite(cs, HIGH);
 }
 
-/*******************************************************************************
-* Name: readThermocouple
-* Description: Read the thermocouple temperature either in Degree Celsius or
-*							 Fahrenheit. Internally, the conversion takes place in the
-*							 background within 100 ms. Values are updated only when the CS
-*							 line is high.
-*
-* Argument  	Description
-* =========  	===========
-* 1. unit   	Unit of temperature required: CELSIUS or FAHRENHEIT
-*
-* Return			Description
-* =========		===========
-*	temperature	Temperature of the thermocouple either in Degree Celsius or 
-*							Fahrenheit. If fault is detected, FAULT_OPEN, FAULT_SHORT_GND or
-*							FAULT_SHORT_VCC will be returned. These fault values are outside
-*							of the temperature range the MAX31855 is capable of.
-*******************************************************************************/	
-double	MAX31855::readThermocouple(unit_t	unit)
-{
-	unsigned long data;
-	double temperature;
-	
-	// Initialize temperature
-	temperature = 0;
-	
-	// Shift in 32-bit of data from MAX31855
-	data = readData();
-	
-	// If fault is detected
-	if (data & 0x00010000)
-	{
-		// Check for fault type (3 LSB)
-		switch (data & 0x00000007)
-		{
-			// Open circuit 
-			case 0x01:
-				temperature = FAULT_OPEN;
-				break;
-			
-			// Thermocouple short to GND
-			case 0x02:
-				temperature = FAULT_SHORT_GND;
-				break;
-			
-			// Thermocouple short to VCC	
-			case 0x04:
-				temperature = FAULT_SHORT_VCC;
-				break;
-		}
-	}
-	// No fault detected
-	else
-	{
-		// Retrieve thermocouple temperature data and strip redundant data
-		data = data >> 18;
-		// Bit-14 is the sign
-		temperature = (data & 0x00001FFF);
+Adafruit_MAX31855::Adafruit_MAX31855(int8_t CS) {
+  cs = CS;
+  hSPI = 1;
 
-		// Check for negative temperature		
-		if (data & 0x00002000)
-		{
-			// 2's complement operation
-			// Invert
-			data = ~data; 
-			// Ensure operation involves lower 13-bit only
-			temperature = data & 0x00001FFF;
-			// Add 1 to obtain the positive number
-			temperature += 1;
-			// Make temperature negative
-			temperature *= -1; 
-		}
-		
-		// Convert to Degree Celsius
-		temperature *= 0.25;
-		
-		// If temperature unit in Fahrenheit is desired
-		if (unit == FAHRENHEIT)
-		{
-			// Convert Degree Celsius to Fahrenheit
-			temperature = (temperature * 1.8) + 32;
-		}
-	}
-	return (temperature);
+  //define pin modes
+  pinMode(cs, OUTPUT);
+  
+  //start and configure hardware SPI
+  SPI.begin();
+  SPI.setBitOrder(MSBFIRST);
+  SPI.setDataMode(SPI_MODE0);
+  SPI.setClockDivider(SPI_CLOCK_DIV4);
+  
+  digitalWrite(cs, HIGH);
 }
 
-/*******************************************************************************
-* Name: readJunction
-* Description: Read the thermocouple temperature either in Degree Celsius or
-*							 Fahrenheit. Internally, the conversion takes place in the
-*							 background within 100 ms. Values are updated only when the CS
-*							 line is high.
-*
-* Argument  	Description
-* =========  	===========
-* 1. unit   	Unit of temperature required: CELSIUS or FAHRENHEIT
-*
-* Return			Description
-* =========		===========
-*	temperature	Temperature of the cold junction either in Degree Celsius or 
-*							Fahrenheit. 
-*
-*******************************************************************************/
-double	MAX31855::readJunction(unit_t	unit)
-{
-	double	temperature;
-	unsigned long data;
-	
-	// Shift in 32-bit of data from MAX31855
-	data = readData();
-	
-	// Strip fault data bits & reserved bit
-	data = data >> 4;
-	// Bit-12 is the sign
-	temperature = (data & 0x000007FF);
-	
-	// Check for negative temperature
-	if (data & 0x00000800)
-	{
-		// 2's complement operation
-		// Invert
-		data = ~data; 
-		// Ensure operation involves lower 11-bit only
-		temperature = data & 0x000007FF;
-		// Add 1 to obtain the positive number
-		temperature += 1;	
-		// Make temperature negative
-		temperature *= -1; 
-	}
-	
-	// Convert to Degree Celsius
-	temperature *= 0.0625;
-	
-	// If temperature unit in Fahrenheit is desired
-	if (unit == FAHRENHEIT)
-	{
-		// Convert Degree Celsius to Fahrenheit
-		temperature = (temperature * 1.8) + 32;
-	}
-	
-	// Return the temperature
-	return (temperature);
+double Adafruit_MAX31855::readInternal(void) {
+  uint32_t v;
+
+  v = spiread32();
+
+  // ignore bottom 4 bits - they're just thermocouple data
+  v >>= 4;
+
+  // pull the bottom 11 bits off
+  float internal = v & 0x7FF;
+  // check sign bit!
+  if (v & 0x800) {
+    // Convert to negative value by extending sign and casting to signed type.
+    int16_t tmp = 0xF800 | (v & 0x7FF);
+    internal = tmp;
+  }
+  internal *= 0.0625; // LSB = 0.0625 degrees
+  //Serial.print("\tInternal Temp: "); Serial.println(internal);
+  return internal;
 }
 
-/*******************************************************************************
-* Name: readData
-* Description: Shift in 32-bit of data from MAX31855 chip. Minimum clock pulse
-*							 width is 100 ns. No delay is required in this case.
-*
-* Argument  	Description
-* =========  	===========
-* 1. NIL
-*
-* Return			Description
-* =========		===========
-*	data				32-bit of data acquired from the MAX31855 chip.
-*				
-*******************************************************************************/
-unsigned long MAX31855::readData()
-{
-	int bitCount;
-	unsigned long data;
-	
-	// Clear data 
-	data = 0;
+double Adafruit_MAX31855::readCelsius(void) {
 
-	// Select the MAX31855 chip
-	digitalWrite(cs, LOW);
-	
-	// Shift in 32-bit of data
-	for (bitCount = 31; bitCount >= 0; bitCount--)
-	{
-		digitalWrite(sck, HIGH);
-		
-		// If data bit is high
-		if (digitalRead(so))
-		{
-			// Need to type cast data type to unsigned long, else compiler will 
-			// truncate to 16-bit
-			data |= ((unsigned long)1 << bitCount);
-		}	
-		
-		digitalWrite(sck, LOW);
-	}
-	
-	// Deselect MAX31855 chip
-	digitalWrite(cs, HIGH);
-	
-	return(data);
+  int32_t v;
+
+  v = spiread32();
+
+  //Serial.print("0x"); Serial.println(v, HEX);
+
+  /*
+  float internal = (v >> 4) & 0x7FF;
+  internal *= 0.0625;
+  if ((v >> 4) & 0x800) 
+    internal *= -1;
+  Serial.print("\tInternal Temp: "); Serial.println(internal);
+  */
+
+  if (v & 0x7) {
+    // uh oh, a serious problem!
+    return NAN; 
+  }
+
+  if (v & 0x80000000) {
+    // Negative value, drop the lower 18 bits and explicitly extend sign bits.
+    v = 0xFFFFC000 | ((v >> 18) & 0x00003FFFF);
+  }
+  else {
+    // Positive value, just drop the lower 18 bits.
+    v >>= 18;
+  }
+  //Serial.println(v, HEX);
+  
+  double centigrade = v;
+
+  // LSB = 0.25 degrees C
+  centigrade *= 0.25;
+  return centigrade;
+}
+
+uint8_t Adafruit_MAX31855::readError() {
+  return spiread32() & 0x7;
+}
+
+double Adafruit_MAX31855::readFarenheit(void) {
+  float f = readCelsius();
+  f *= 9.0;
+  f /= 5.0;
+  f += 32;
+  return f;
+}
+
+uint32_t Adafruit_MAX31855::spiread32(void) { 
+  int i;
+  uint32_t d = 0;
+
+  if(hSPI) {
+    return hspiread32();
+  }
+
+  digitalWrite(sclk, LOW);
+  _delay_ms(1);
+  digitalWrite(cs, LOW);
+  _delay_ms(1);
+
+  for (i=31; i>=0; i--)
+  {
+    digitalWrite(sclk, LOW);
+    _delay_ms(1);
+    d <<= 1;
+    if (digitalRead(miso)) {
+      d |= 1;
+    }
+
+    digitalWrite(sclk, HIGH);
+    _delay_ms(1);
+  }
+
+  digitalWrite(cs, HIGH);
+  //Serial.println(d, HEX);
+  return d;
+}
+
+uint32_t Adafruit_MAX31855::hspiread32(void) {
+  int i;
+  // easy conversion of four uint8_ts to uint32_t
+  union bytes_to_uint32 {
+    uint8_t bytes[4];
+    uint32_t integer;
+  } buffer;
+  
+  digitalWrite(cs, LOW);
+  _delay_ms(1);
+  
+  for (i=3;i>=0;i--) {
+    buffer.bytes[i] = SPI.transfer(0x00);
+  }
+  
+  digitalWrite(cs, HIGH);
+  
+  return buffer.integer;
+  
 }

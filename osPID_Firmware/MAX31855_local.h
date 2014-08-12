@@ -1,36 +1,42 @@
-#if !defined MAX31855_H
-#define MAX31855_H
+/*************************************************** 
+  This is a library for the Adafruit Thermocouple Sensor w/MAX31855K
 
-#if	ARDUINO >= 100
-	#include "Arduino.h"
-#else  
-	#include "WProgram.h"
+  Designed specifically to work with the Adafruit Thermocouple Sensor
+  ----> https://www.adafruit.com/products/269
+
+  These displays use SPI to communicate, 3 pins are required to  
+  interface
+  Adafruit invests time and resources providing this open source code, 
+  please support Adafruit and open-source hardware by purchasing 
+  products from Adafruit!
+
+  Written by Limor Fried/Ladyada for Adafruit Industries.  
+  BSD license, all text above must be included in any redistribution
+ ****************************************************/
+
+#ifndef ADAFRUIT_MAX31855_H
+#define ADAFRUIT_MAX31855_H
+
+#if (ARDUINO >= 100)
+ #include "Arduino.h"
+#else
+ #include "WProgram.h"
 #endif
 
-#define	FAULT_OPEN      10000
-#define	FAULT_SHORT_GND 10001
-#define	FAULT_SHORT_VCC 10002	
+class Adafruit_MAX31855 {
+ public:
+  Adafruit_MAX31855(int8_t SCLK, int8_t CS, int8_t MISO);
+  Adafruit_MAX31855(int8_t CS);
 
-enum	unit_t
-{
-	CELSIUS,
-	FAHRENHEIT
+  double readInternal(void);
+  double readCelsius(void);
+  double readFarenheit(void);
+  uint8_t readError();
+
+ private:
+  int8_t sclk, miso, cs, hSPI;
+  uint32_t spiread32(void);
+  uint32_t hspiread32(void);
 };
 
-class	MAX31855
-{
-	public:
-		MAX31855(unsigned char SO, unsigned char CS, unsigned char SCK);
-	
-		double	readThermocouple(unit_t	unit);
-		double	readJunction(unit_t	unit);
-		
-	private:
-		unsigned char so;
-		unsigned char cs;
-		unsigned char sck;
-		
-		unsigned long readData();
-
-};
 #endif
