@@ -96,7 +96,7 @@ double Adafruit_MAX31855::readCelsius(void) {
 uint8_t Adafruit_MAX31855::readError() {
   return spiread32() & 0x7;
 }
-123
+
 double Adafruit_MAX31855::readFarenheit(void) {
   float f = readCelsius();
   f *= 9.0;
