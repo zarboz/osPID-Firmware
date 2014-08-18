@@ -1,59 +1,3 @@
-/*******************************************************************************
- * The stripboard PID Arduino shield uses firmware based on the osPID but
- * simplified hardware. Instead of swappable output cards there is a simple
- * 5V logical output that can drive an SSR. In place of output cards there
- * is a terminal block that can be used for a 1-wire bus or NTC thermistor,
- * and female pin headers that can interface a MAX31855 thermocouple amplifier
- * breakout board. Each of these inputs is supported by different
- * device drivers & libraries. The input in use is specified by a menu option.
- * This saves having to recompile the firmware when changing input sensors.
- *
- * Inputs
- * ======
- *    DS18B20+ 1-wire digital thermometer with data pin on A0, OR
- *    10K NTC thermistor with voltage divider input on pin A0, OR
- *    MAX31855KASA interface to type-K thermocouple on pins A0-A2.
- *
- * Output
- * ======
- *    1 SSR output on pin A3.
- *
- * For firmware development, there is also the ospSimulator which acts as both
- * the input and output device and simulates the controller being attached to a
- * simple system.
- *******************************************************************************/
- 
- /* Thoughts looking ahead to having multiple PID controller instances.
-  * 
-  * Really there should be a PID_engine class and a PID_controller superclass
-  *
-  * the engine class is mainly (solely) concerned with calculating the output
-  * 
-  * profile behaviour should be part of the controller class because it 
-  * manipulates the engine
-  *
-  * auto tuning should be a method of the engine class, in my opinion
-  * i think the reason it is not currently set up this way is that 
-  * configuring the method needs to happen offline in the controller
-  * not a good enough reason in my view
-  *
-  * alarm behaviour would be easy to integrate into the engine but might 
-  * make more sense as part of the controller
-  *
-  * I/O obviously should be controller methods, the alarm is arguably I/O
-  * the trip limits are based on sensor input which is extrinsic to the engine
-  * 
-  * and obviously the whole millis() based timer polling loop has to go
-  */
- 
- /*******************************************************************************
- *
- *
- *                          INCLUDES  &  DEFINES
- *
- *
- *******************************************************************************/
-
 #include <Arduino.h>
 #include <LiquidCrystal.h>
 #include <Wire.h>
@@ -83,14 +27,6 @@ ospSimulator theInputDevice;
 #define MINIMUM(a,b) (((a)<(b))?(a):(b))
 #define MAXIMUM(a,b) (((b)>(a))?(a):(b))
 
- /*******************************************************************************
- *
- *
- *                          PROTOTYPE DEFINITIONS
- *
- *
- *******************************************************************************/
-
 extern void __attribute__ ((noinline)) LCDprintln(const char* s);
 extern void drawStartupBanner();
 extern void setupEEPROM();
@@ -109,16 +45,6 @@ extern void drawMenu();
 extern void saveEEPROMSettings();
 extern void processSerialCommand();
 
- /*******************************************************************************
- *
- *
- *                        GLOBAL VARIABLE INITIALIZATION
- *
- *
- *******************************************************************************/
-
-// static constant variables
-// power-on options
 enum 
 {
   POWERON_DISABLE = 0,
@@ -126,22 +52,17 @@ enum
   POWERON_RESUME_PROFILE
 };
 
-// we use the LiquidCrystal library to drive the LCD screen
+
 LiquidCrystal lcd(lcdRsPin, lcdEnablePin, lcdD0Pin, lcdD1Pin, lcdD2Pin, lcdD3Pin);
-
-// our AnalogButton library provides debouncing and interpretation
-// of the analog-multiplexed button channel
 ospAnalogButton<buttonsPin, 100, 253, 454, 657> theButtonReader;
-
-// an in-memory buffer that we use when receiving a profile over USB
 ospProfile profileBuffer;
 
-// the 0-based index of the active profile while a profile is executing
+
 byte activeProfileIndex;
 byte currentProfileStep;
 boolean runningProfile = false;
 
-// the gain coefficients of the PID controller
+// the gain coefficients of the PID controller this is the preset value on boot
 ospDecimalValue<3> PGain = { 1600 }, IGain = { 200 }, DGain = { 0 };
 
 // the 4 setpoints we can easily switch between
@@ -151,10 +72,9 @@ ospDecimalValue<1> setPoints[4] = { { 250 }, { 650 }, { 1000 }, { 1250 } };
 ospDecimalValue<1> setPoints[4] = { { 800 }, { 1500 }, { 2120 }, { 2600 } };
 #endif
 
-// the index of the selected setpoint
 byte setPointIndex = 0;
 
-// set value for PID controller
+
 double activeSetPoint;
 
 // the most recent measured input value
@@ -350,24 +270,26 @@ void setup()
   pinMode(lcdGRNPin, OUTPUT);
   pinMode(lcdBLUPin, OUTPUT);
   
-  //I like red as static background color
-  pinMode(lcdREDPin, OUTPUT);
-  
   brightness = 200;
   
 //Code to correct the red color from overpowering the other RGB colors  
-  for (int i = 0; i < 255; i++) {
+  //start red
+  /*for (int i = 0; i < 255; i++) {
     setBacklight(i, 0, 255-i);
     delay(5);
   }
+  //fade red to green
   for (int i = 0; i < 255; i++) {
     setBacklight(255-i, i, 0);
     delay(5);
   }
+  //fade green to blue
   for (int i = 0; i < 255; i++) {
     setBacklight(0, 255-i, i);
     delay(5);
-  }
+  }*/
+  setBacklight(0,255,0);
+  
 
   lcdTime = 25;
   updateTimer();
@@ -614,6 +536,19 @@ void loop()
     readInputTime += theInputDevice.requestInput();
   }
   
+if (displayInput > displaySetpoint) { 
+    setBacklight(0, 0, 255);
+    delay(5);
+	}
+else if (displayInput <= displaySetpoint) {
+    setBacklight(0, 255, 0);
+    delay(5);
+	
+}
+else{
+   setBacklight(255, 0, 0);
+  delay(5);
+}
   // step the profile, if there is one running
   // this may call ospSettingsHelper::eepromClearBits(), but not
   // ospSettingsHelper::eepromWrite()
