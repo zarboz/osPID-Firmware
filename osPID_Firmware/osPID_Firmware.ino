@@ -57,15 +57,11 @@ LiquidCrystal lcd(lcdRsPin, lcdEnablePin, lcdD0Pin, lcdD1Pin, lcdD2Pin, lcdD3Pin
 ospAnalogButton<buttonsPin, 100, 253, 454, 657> theButtonReader;
 ospProfile profileBuffer;
 
-
 byte activeProfileIndex;
 byte currentProfileStep;
 boolean runningProfile = false;
-
-// the gain coefficients of the PID controller this is the preset value on boot
 ospDecimalValue<3> PGain = { 100 }, IGain = { 60 }, DGain = { 20 };
 
-// the 4 setpoints we can easily switch between
 #if !defined (UNITS_FAHRENHEIT)
 ospDecimalValue<1> setPoints[4] = { { 250 }, { 650 }, { 1000 }, { 1250 } };
 #else
@@ -74,28 +70,23 @@ ospDecimalValue<1> setPoints[4] = { { 800 }, { 1500 }, { 2120 }, { 2600 } };
 
 byte setPointIndex = 0;
 
-
 double activeSetPoint;
 
-// the most recent measured input value
 double input = NAN; 
 
-// last good input value, used by PID controller
 double lastGoodInput = 25.0;
 
-// the output duty cycle calculated by PID controller
 double output = 0.0;   
 
-// the manually-commanded output value
 ospDecimalValue<1> manualOutput = { 0 };
 
-// temporary fixed point decimal values for display and data entry
-ospDecimalValue<1> displaySetpoint    = { 250 };
+//Temporarily fill LCD with preset data these numbers are pointless
+
+ospDecimalValue<1> displaySetpoint    = { 710 };
 ospDecimalValue<1> displayInput       = { -19999 }; // NaN
 ospDecimalValue<1> displayCalibration = { 0 }; 
-ospDecimalValue<1> displayWindow      = { 50 }; 
+ospDecimalValue<1> displayWindow      = { 10 }; 
 
-// the hard trip limits
 #if !defined (UNITS_FAHRENHEIT)
 ospDecimalValue<1> lowerTripLimit =   { 0 } , upperTripLimit = { 1250 };
 #else
@@ -110,10 +101,8 @@ byte powerOnBehavior = DEFAULT_POWER_ON_BEHAVIOR;
 
 bool controllerIsBooting = true;
 
-// the actual PID controller
 PID myPID(&lastGoodInput, &output, &activeSetPoint, PGain, IGain, DGain, PID::DIRECT);
 
-// PID auto tune parameters
 byte aTuneMethod = PID::AUTOTUNE_DEFAULT_METHOD; 
 ospDecimalValue<1> aTuneStep  = (ospDecimalValue<1>){PID::AUTOTUNE_DEFAULT_OUTPUT_STEP};
 int aTuneLookBack             = PID::AUTOTUNE_DEFAULT_LOOKBACK_SEC;
@@ -124,12 +113,10 @@ ospDecimalValue<3> aTuneNoise = makeDecimal<3>(PID::AUTOTUNE_DEFAULT_NOISE_BAND_
 ospDecimalValue<3> aTuneNoise = makeDecimal<3>(PID::AUTOTUNE_DEFAULT_NOISE_BAND_CELSIUS * 1.8);
 #endif 
 
-// timekeeping to schedule the various tasks in the main loop
 unsigned long now, lcdTime, readInputTime;
 
 extern void drawNotificationCursor(char icon);
 
-// some constants in flash memory, for reuse
 #if !defined (UNITS_FAHRENHEIT)
 const __FlashStringHelper *FdegCelsius() { return F(" °C"); }
 #else
@@ -138,16 +125,7 @@ const __FlashStringHelper *FdegFahrenheit() { return F(" °F"); }
 
 PROGMEM const char Pprofile[] = "Profile ";
 
- /*******************************************************************************
- *
- *
- *                     INTERRUPT SERVICE ROUTINE FOR BUZZER
- *
- *
- *******************************************************************************/
-
 #if !defined (SILENCE_BUZZER)
-// buzzer 
 volatile int buzz = 0; // countdown timer for intermittent buzzer
 enum { BUZZ_OFF = 0, BUZZ_UNTIL_CANCEL = -769 };
 #define buzzMillis(x)    buzz = (x)*4
@@ -187,14 +165,6 @@ ISR (TIMER2_COMPA_vect)
 }
 #endif
 
- /*******************************************************************************
- *
- *
- *                         FUNCTION  INITIALIZATION
- *
- *
- *******************************************************************************/
-
 char hex(byte b)
 {
   return ((b < 10) ? (char) ('0' + b) : (char) ('A' - 10 + b));
@@ -205,7 +175,6 @@ void __attribute__ ((noinline)) updateTimer()
   now = millis();
 }
 
-// check time avoiding overflow
 bool __attribute__ ((noinline)) after(unsigned long targetTime)
 {
   unsigned long u = (targetTime - now);
@@ -223,18 +192,8 @@ void __attribute__((noinline)) updateActiveSetPoint()
   activeSetPoint = double(displaySetpoint);
 }
 
- /*******************************************************************************
- *
- *
- *                        CONTROLLER  INITIALIZATION
- *
- *
- *******************************************************************************/
-
-// initialize the controller: this is called by the Arduino runtime on bootup
 void setup()
 {
-  // initialize pins
   for (byte pin = 8; pin < 13; pin++)
   {
     pinMode(pin, INPUT_PULLUP);
@@ -273,21 +232,21 @@ void setup()
   brightness = 200;
   
 //Code to correct the red color from overpowering the other RGB colors  
-  //start red
-  /*for (int i = 0; i < 255; i++) {
+  //start red to green
+  for (int i = 0; i < 255; i++) {
     setBacklight(i, 0, 255-i);
-    delay(5);
+    delay(2);
   }
   //fade red to green
   for (int i = 0; i < 255; i++) {
     setBacklight(255-i, i, 0);
-    delay(5);
+    delay(2);
   }
   //fade green to blue
   for (int i = 0; i < 255; i++) {
     setBacklight(0, 255-i, i);
-    delay(5);
-  }*/
+    delay(2);
+  }
   setBacklight(0,255,0);
   
 
@@ -351,16 +310,6 @@ void setup()
   controllerIsBooting = false;
 }
 
- /*******************************************************************************
- *
- *
- *                           BUTTON  ROUTINES
- *
- *
- *******************************************************************************/
-
-// Letting a button auto-repeat without redrawing the LCD in between leads to a
-// poor user interface
 bool lcdRedrawNeeded;
 
 // keep track of which button is being held, and for how long
@@ -446,51 +395,16 @@ static void checkButtons()
   }
 }
 
- /*******************************************************************************
- *
- *
- *                                MAIN   LOOP
- *
- *
- *******************************************************************************/
-
-// This is the Arduino main loop.
-//
-// There are two goals this loop must balance: the highest priority is
-// that the PID loop be executed reliably and on-time; the other goal is that
-// the screen, buttons, and serial interfaces all be responsive. However,
-// since things like redrawing the LCD may take tens of milliseconds -- and responding
-// to serial commands can take 100s of milliseconds at low bit rates -- a certain
-// measure of cleverness is required.
-//
-// Alongside the real-time task of the PID loop, there are 6 other tasks which may
-// need to be performed:
-// 1. handling a button press
-// 2. executing a step of the auto-tuner
-// 3. executing a step of a profile
-// 4. redrawing the LCD
-// 5. saving settings to EEPROM
-// 6. processing a serial-port command
-//
-// Characters from the serial port are received asynchronously: it is only the
-// command _processing_ which needs to be scheduled.
-
 bool settingsWritebackNeeded;
 unsigned long settingsWritebackTime;
 
-// record that the settings have changed, and need to be written to EEPROM
-// as soon as they are done changing
 void markSettingsDirty()
 {
   settingsWritebackNeeded = true;
-
-  // wait until nothing has changed for 5s before writing to EEPROM
-  // this reduces EEPROM wear by not writing every time a digit is changed
   settingsWritebackTime = now + 5000;
 }
 
-// whether loop() is permitted to do LCD, EEPROM, or serial I/O: this is set
-// to false when loop() is being re-entered during some slow operation
+
 bool blockSlowOperations;
 
 void realtimeLoop()
@@ -506,18 +420,15 @@ void realtimeLoop()
 }
 
 #if !defined (STANDALONE_CONTROLLER)
-// we accumulate characters for a single serial command in this buffer
 char serialCommandBuffer[33];
 byte serialCommandLength;
 #endif
 
 void loop()
 {
-  // first up is the realtime part of the loop, which is not allowed to perform
-  // EEPROM writes or serial I/O
+
   updateTimer();
 
-  // highest priority task is to update the SSR output
   theOutputDevice.setOutputPercent(output);
 
   // read input, if it is ready
@@ -623,29 +534,19 @@ else if (displayInput == trip2) {
      delay(5);
    }
 }
-
-  // step the profile, if there is one running
-  // this may call ospSettingsHelper::eepromClearBits(), but not
-  // ospSettingsHelper::eepromWrite()
   if (runningProfile)
   {
     profileLoopIteration();
-      
-    // update displayed set point
     updateActiveSetPoint();
   }
 
-  // update the PID
   myPID.compute();  
   
-  // update the displayed output
-  // unless in manual mode, in which case a new value may have been entered
   if (myPID.isTuning || (myPID.getMode() != PID::MANUAL))
   {
     manualOutput = makeDecimal<1>(output);
   }
 
-  // after the PID has updated, check the trip limits
   if (tripLimitsEnabled)
   {
     if (tripAutoReset)
@@ -658,7 +559,8 @@ else if (displayInput == trip2) {
       ((displayInput < lowerTripLimit) || (upperTripLimit < displayInput ) || tripped)
     )
     {
-      output = 0.0;
+      //This is a test right here altering output from 0.0 -> 10.0
+      output = 10.0;
       manualOutput = (ospDecimalValue<1>){0};
       tripped = true;
       
@@ -688,19 +590,13 @@ else if (displayInput == trip2) {
 
   }  
 
-  // after the realtime part comes the slow operations, which may re-enter
-  // the realtime part of the loop but not the slow part
   if (blockSlowOperations)
     return;
 
-  // update the time after each major operation;
   updateTimer();
 
-  // we want to monitor the buttons as often as possible
   checkButtons();
   
-  // we try to keep an LCD frame rate of 4 Hz, plus refreshing as soon as
-  // a button is pressed
   updateTimer();
   if (after(lcdTime) || lcdRedrawNeeded)
   {
@@ -709,28 +605,24 @@ else if (displayInput == trip2) {
     lcdTime += 250;
   }
 
-  // can't do much without input, so initializing input is next in line 
   if (!theInputDevice.getInitializationStatus())
   {
     input = NAN;
-    displayInput = (ospDecimalValue<1>){-19999}; // Display Err
+    displayInput = (ospDecimalValue<1>){-19999}; 
     theInputDevice.initialize();
   }     
 
   updateTimer();
   if (settingsWritebackNeeded && after(settingsWritebackTime))
   {
-    // clear settingsWritebackNeeded first, so that it gets re-armed if the
-    // realtime loop calls markSettingsDirty()
     settingsWritebackNeeded = false;
 
-    // display a '$' instead of the cursor to show that we're saving to EEPROM
     drawNotificationCursor('$');
     saveEEPROMSettings();
   }
 
 #if !defined (STANDALONE_CONTROLLER)
-  // accept any pending characters from the serial buffer
+  
   byte avail = Serial.available();
   while (avail--)
   {
@@ -744,24 +636,13 @@ else if (displayInput == trip2) {
       
     if (serialCommandLength < 32)
     {
-      // throw away excess characters
       serialCommandBuffer[serialCommandLength++] = ch;
     }
 
     if ((ch == '\n') || (ch == '\r'))
     {
-      // a complete command has been received
       serialCommandBuffer[serialCommandLength - 1] = '\n';
       drawNotificationCursor('*');
-
-      /*
-      // debug
-      Serial.print(F("Arduino hears:"));
-      Serial.write('"');
-      Serial.print(serialCommandBuffer);
-      Serial.write('"');
-      Serial.println();
-      */
 
       processSerialCommand();
       
