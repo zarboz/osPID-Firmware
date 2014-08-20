@@ -60,7 +60,7 @@ ospProfile profileBuffer;
 byte activeProfileIndex;
 byte currentProfileStep;
 boolean runningProfile = false;
-ospDecimalValue<3> PGain = { 100 }, IGain = { 60 }, DGain = { 20 };
+ospDecimalValue<3> PGain = { 1600  }, IGain = { 60 }, DGain = { 20 };
 
 #if !defined (UNITS_FAHRENHEIT)
 ospDecimalValue<1> setPoints[4] = { { 250 }, { 650 }, { 1000 }, { 1250 } };
@@ -511,29 +511,22 @@ int trip3 = (displaySetpoint - 35);
 int trip4 = (displaySetpoint + 35);
   
 if (displayInput > trip4) { 
-    for (int i = 0; i < 255; i++) {
-      setBacklight(255-i, i, 0);
+      setBacklight(255, 0, 0);
         delay(5);
 	}
-}
+
 else if (displayInput < trip3) {
-    for (int i = 0; i < 255; i++) {
-      setBacklight(0, 255-i, i);
-        delay(5);;	
-        }
+      setBacklight(0, 255, 0);
+        delay(5);;	   
 }
 else if (displayInput == trip1) {
-   for (int i = 0; i < 255; i++) {
-    setBacklight(0, i, 255-i);
-      delay(5);
-  }
+    setBacklight(0, 0, 255);
 }
-else if (displayInput == trip2) {
-   for (int i = 0; i < 255; i++) {
-     setBacklight(i,255-i,0);
+else if (displayInput == trip2 || trip1) {
+     setBacklight(0,255,0);
      delay(5);
-   }
 }
+
   if (runningProfile)
   {
     profileLoopIteration();
