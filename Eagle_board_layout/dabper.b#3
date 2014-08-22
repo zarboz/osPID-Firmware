@@ -307,6 +307,38 @@ Atmel ATmega8, ATmega168: 8-bit AVR microcontrollers
 </package>
 </packages>
 </library>
+<library name="relay">
+<description>&lt;b&gt;Relays&lt;/b&gt;&lt;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Eichhoff
+&lt;li&gt;Finder
+&lt;li&gt;Fujitsu
+&lt;li&gt;HAMLIN
+&lt;li&gt;OMRON
+&lt;li&gt;Matsushita
+&lt;li&gt;NAiS
+&lt;li&gt;Siemens
+&lt;li&gt;Schrack
+&lt;/ul&gt;
+&lt;author&gt;Created by librarian@cadsoft.de&lt;/author&gt;</description>
+<packages>
+<package name="AQ1">
+<description>&lt;b&gt;SOLID STATE RELAY&lt;/b&gt; NAiS&lt;p&gt;
+Source: http://www.mew-europe.com/.. en_ds_61601_0000.pdf</description>
+<wire x1="-16.4" y1="4.9" x2="16.4" y2="4.9" width="0.2032" layer="21"/>
+<wire x1="16.4" y1="4.9" x2="16.4" y2="-4.9" width="0.2032" layer="21"/>
+<wire x1="16.4" y1="-4.9" x2="-14.7" y2="-4.9" width="0.2032" layer="21"/>
+<wire x1="-16.4" y1="-3.2" x2="-16.4" y2="4.9" width="0.2032" layer="21"/>
+<wire x1="-16.4" y1="-3.2" x2="-14.7" y2="-4.9" width="0.2032" layer="21"/>
+<pad name="1" x="-12.7" y="0" drill="1.2"/>
+<pad name="2" x="-5.08" y="0" drill="1.2"/>
+<pad name="3" x="7.62" y="0" drill="1.2"/>
+<pad name="4" x="12.7" y="0" drill="1.2"/>
+<text x="-13.97" y="-3.81" size="1.27" layer="25">&gt;NAME</text>
+<text x="-2.54" y="-3.81" size="1.27" layer="27">&gt;VALUE</text>
+</package>
+</packages>
+</library>
 </libraries>
 <attributes>
 </attributes>
@@ -496,6 +528,12 @@ design rules under a new name.</description>
 <element name="IC2" library="AlexW-Eagle-Libraries" package="SOIC8" value="MAX31855" x="38.1" y="27.94"/>
 <element name="U$1" library="adafruit" package="LCD1602-RGB" value="HD44780LCD_RGBLONGPINS" x="54.61" y="27.94"/>
 <element name="IC1" library="Arduino-AVR" package="TQFP32-08" value="ATMEGA328-AU" x="54.61" y="27.94"/>
+<element name="K1" library="relay" package="AQ1" value="AQ1AD2-3" x="30.48" y="53.34">
+<attribute name="OC_NEWARK" value="10C4052" x="30.48" y="53.34" size="1.778" layer="27" display="off"/>
+<attribute name="MPN" value="AQ1AD2-3/28VDC" x="30.48" y="53.34" size="1.778" layer="27" display="off"/>
+<attribute name="MF" value="AROMAT/ MATSUSHITA" x="30.48" y="53.34" size="1.778" layer="27" display="off"/>
+<attribute name="OC_FARNELL" value="unknown" x="30.48" y="53.34" size="1.778" layer="27" display="off"/>
+</element>
 </elements>
 <signals>
 <signal name="GND/ANALOG">
@@ -578,12 +616,19 @@ design rules under a new name.</description>
 <contactref element="IC1" pad="4"/>
 <contactref element="IC2" pad="4"/>
 <contactref element="IC2" pad="1"/>
+<contactref element="K1" pad="3"/>
 <wire x1="40.005" y1="25.34" x2="50.3174" y2="28.34" width="0" layer="19" extent="1-1"/>
 <wire x1="36.195" y1="25.34" x2="40.005" y2="25.34" width="0" layer="19" extent="1-1"/>
 <wire x1="22.61" y1="43.44" x2="36.195" y2="25.34" width="0" layer="19" extent="1-1"/>
+<wire x1="38.1" y1="53.34" x2="36.195" y2="25.34" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$2">
 <contactref element="IC1" pad="3"/>
+</signal>
+<signal name="N$17">
+<contactref element="K1" pad="4"/>
+<contactref element="IC1" pad="26"/>
+<wire x1="43.18" y1="53.34" x2="56.61" y2="32.2326" width="0" layer="19" extent="1-1"/>
 </signal>
 </signals>
 </board>
