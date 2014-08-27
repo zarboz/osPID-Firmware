@@ -10,8 +10,8 @@
  ********************************************/
 
 // the controller name displayed in the startup banner and the identifY response
-static const char CONTROLLER_NAME[] = "DabPer_Enail";
-PROGMEM const char PcontrollerName[] = "DabPer_Enail";
+static const char CONTROLLER_NAME[] = "DabPer Enail";
+PROGMEM const char PcontrollerName[] = "DabPer Enail";
 
 // the version tag displayed in the startup banner and the identifY response
 static const char VERSION_TAG[] = "710 Edition";
@@ -60,9 +60,6 @@ static const byte buzzerPin           = A5;
  *
  ********************************************/
 
-// quiet mode (buzzer off) 
-#define SILENCE_BUZZER
-
 // use Fahrenheit temperature units
 // NB This option only changes the units for the
 //    input sensor measurements. Temperature settings 
@@ -76,12 +73,7 @@ static const bool unitsFahrenheit = true;
 // use simulator for input/output
 #undef USE_SIMULATOR
 
-// necessary omissions to compile on Atmega microcontrollers with 32 kB flash
-#if defined (__AVR_ATmega328P__) || defined (__AVR_ATmega32U4__)
 #define ATMEGA_32kB_FLASH
-#else
-#undef ATMEGA_32kB_FLASH
-#endif
 
 // omit serial processing commands for standalone controller
 // setting this option will compile a hex file several kB shorter

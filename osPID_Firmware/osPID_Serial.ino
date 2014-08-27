@@ -1240,11 +1240,7 @@ void processSerialCommand()
     {
       goto out_EMOD;
     }
-    tripped = false;
-    
-#if !defined (SILENCE_BUZZER)    
-    buzzOff;
-#endif    
+    tripped = false;   
 
     goto out_ACK; // no EEPROM writeback needed
 

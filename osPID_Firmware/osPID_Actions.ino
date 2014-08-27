@@ -65,17 +65,6 @@ bool startCurrentProfileStep()
     return false;
   }
 
-#if !defined (SILENCE_BUZZER)
-  if (stepType & ospProfile::STEP_FLAG_BUZZER)
-  {
-    buzzMillis(1000);
-  }
-  else
-  {
-    buzzOff;
-  }
-#endif
-
   profileState.stepType = stepType & ospProfile::STEP_TYPE_MASK;
   profileState.stepEndMillis = now + profileState.stepDuration;
 
@@ -183,10 +172,6 @@ void stopProfile()
   
 #if !defined (ATMEGA_32kB_FLASH)
   ospAssert(runningProfile);
-#endif
-
-#if !defined (SILENCE_BUZZER)
-  buzzOff;
 #endif
 
   recordProfileCompletion();

@@ -261,9 +261,11 @@ PROGMEM DecimalItem decimalItemData[DECIMAL_ITEM_COUNT] =
   { { 'S', 'v', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &displaySetpoint },
   { { 'P', 'v', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::NO_EDIT, &displayInput },
   { { 'O', 'u', 't' }, DecimalItem::RANGE_0_1000      | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::EDIT_MANUAL_ONLY, &manualOutput },
-  { { 'P', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &PGain },
-  { { 'I', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &IGain },
-  { { 'D', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &DGain },
+  //Changed Three decimal place to two decimal place and also changed 0-32767 to 0-999.99 we will see if this helps with the math 
+  //If things get fuckin crazy its probably because im using a scaling range that the PID algorithm doesn't accept 
+  { { 'P', ' ', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::TWO_DECIMAL_PLACES, &PGain },
+  { { 'I', ' ', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::TWO_DECIMAL_PLACES, &IGain },
+  { { 'D', ' ', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::TWO_DECIMAL_PLACES, &DGain },
   { { 'C', 'a', 'l' }, DecimalItem::RANGE_M999_P999   | DecimalItem::ONE_DECIMAL_PLACE, &displayCalibration },
   { { 'C', 'y', 'c' }, DecimalItem::RANGE_10_32767    | DecimalItem::ONE_DECIMAL_PLACE, &displayWindow },
   { { 'M', 'i', 'n' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &lowerTripLimit },
@@ -358,10 +360,6 @@ void drawStartupBanner()
   //pinMode(lcdREDPin, OUTPUT);
   //pinMode(lcdGRNPin, OUTPUT);
   //pinMode(lcdBLUPin, OUTPUT);
-  
-#if !defined (SILENCE_BUZZER)
-  // buzzMillis(10);
-#endif  
 
 }
 
@@ -1153,10 +1151,6 @@ void okKeyPress()
     {
       tripped = false;
       setOutputToManualOutput();
-      
-#if !defined SILENCE_BUZZER      
-      buzzOff;
-#endif
 
       return;
     }
