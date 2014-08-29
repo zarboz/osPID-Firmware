@@ -393,16 +393,16 @@ int trip3 = (displaySetpoint - 35);
 int trip4 = (displaySetpoint + 35);
 int trip5 = (displayInput == 150);  
   
-if (displayInput > trip4) { 
+if (displayInput >= trip4) { 
       setBacklight(255, 0, 0);
         delay(5);
 	}
 
-else if (displayInput < trip3) {
+else if (displayInput <= trip3) {
       setBacklight(255, 162, 0);
-        delay(5);;	   
+        delay(5);	   
 }
-else if (displayInput < trip1) {
+else if (displayInput <= trip1) {
     setBacklight(225, 162, 0);
 }
 else if (displayInput == trip2 || trip1) {
@@ -414,7 +414,12 @@ else if (displayInput <= trip5){
       delay(5);
 }
 
-else if (displayInput ==  -19999);{
+else if (displayInput <=  trip5);{
+      setBacklight(0,0,255);
+      delay(5);
+}
+
+if (displayInput <= -19999);{
       setBacklight(255,0,255);
       delay(5);
 }

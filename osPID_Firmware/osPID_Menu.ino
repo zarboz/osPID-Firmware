@@ -258,12 +258,12 @@ struct DecimalItem
 // This must be in the same order as the ITEM_* enumeration
 PROGMEM DecimalItem decimalItemData[DECIMAL_ITEM_COUNT] =
 {
-  { { 'S', 'v', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &displaySetpoint },
-  { { 'P', 'v', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::NO_EDIT, &displayInput },
+  { { 'S', 'e', 't' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &displaySetpoint },
+  { { 'C', 'u', 'r' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::NO_EDIT, &displayInput },
   { { 'O', 'u', 't' }, DecimalItem::RANGE_0_1000      | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::EDIT_MANUAL_ONLY, &manualOutput },
-  { { 'P', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::TWO_DECIMAL_PLACES, &PGain },
-  { { 'I', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::TWO_DECIMAL_PLACES, &IGain },
-  { { 'D', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::TWO_DECIMAL_PLACES, &DGain },
+  { { 'P', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &PGain },
+  { { 'I', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &IGain },
+  { { 'D', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &DGain },
   { { 'C', 'a', 'l' }, DecimalItem::RANGE_M999_P999   | DecimalItem::ONE_DECIMAL_PLACE, &displayCalibration },
   { { 'C', 'y', 'c' }, DecimalItem::RANGE_0_32767     | DecimalItem::TWO_DECIMAL_PLACES, &displayWindow },
   { { 'M', 'i', 'n' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &lowerTripLimit },
