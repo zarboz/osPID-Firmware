@@ -54,6 +54,7 @@ enum
 
 
 LiquidCrystal lcd(lcdRsPin, lcdEnablePin, lcdD0Pin, lcdD1Pin, lcdD2Pin, lcdD3Pin);
+
 ospAnalogButton<buttonsPin, 100, 253, 454, 657> theButtonReader;
 ospProfile profileBuffer;
 
@@ -161,6 +162,7 @@ void setup()
   pinMode(buzzerPin, OUTPUT);
   
   // set up the LCD,show controller name
+  
   lcd.begin(16, 2);
   drawStartupBanner();
   

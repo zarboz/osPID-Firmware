@@ -355,6 +355,7 @@ void drawStartupBanner()
   LCDsetCursorBottomLeft();
   LCDprintln(Pversion);
 
+
 }
 
 // draw a profile name at the current position
