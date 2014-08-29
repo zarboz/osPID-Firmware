@@ -10,12 +10,12 @@
  ********************************************/
 
 // the controller name displayed in the startup banner and the identifY response
-static const char CONTROLLER_NAME[] = "DabPer Enail";
-PROGMEM const char PcontrollerName[] = "DabPer Enail";
+static const char CONTROLLER_NAME[] = "  DabPer Enail";
+PROGMEM const char PcontrollerName[] = "  DabPer Enail";
 
 // the version tag displayed in the startup banner and the identifY response
-static const char VERSION_TAG[] = "710 Prototype";
-PROGMEM const char Pversion[] = "710 Prototype";
+static const char VERSION_TAG[] = " 710  Prototype";
+PROGMEM const char Pversion[] = " 710  Prototype";
 
 /********************************************
  *
