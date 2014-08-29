@@ -225,7 +225,7 @@ struct DecimalItem
     }
     if (f & (RANGE_0_32767 | RANGE_10_32767))
     {
-      return 32767;
+      return 9999;
     }
     return 9999;
   }
@@ -261,13 +261,11 @@ PROGMEM DecimalItem decimalItemData[DECIMAL_ITEM_COUNT] =
   { { 'S', 'v', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &displaySetpoint },
   { { 'P', 'v', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::NO_EDIT, &displayInput },
   { { 'O', 'u', 't' }, DecimalItem::RANGE_0_1000      | DecimalItem::ONE_DECIMAL_PLACE | DecimalItem::EDIT_MANUAL_ONLY, &manualOutput },
-  //Changed Three decimal place to two decimal place and also changed 0-32767 to 0-999.99 we will see if this helps with the math 
-  //If things get fuckin crazy its probably because im using a scaling range that the PID algorithm doesn't accept 
-  { { 'P', ' ', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::TWO_DECIMAL_PLACES, &PGain },
-  { { 'I', ' ', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::TWO_DECIMAL_PLACES, &IGain },
-  { { 'D', ' ', ' ' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::TWO_DECIMAL_PLACES, &DGain },
+  { { 'P', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::TWO_DECIMAL_PLACES, &PGain },
+  { { 'I', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::TWO_DECIMAL_PLACES, &IGain },
+  { { 'D', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::TWO_DECIMAL_PLACES, &DGain },
   { { 'C', 'a', 'l' }, DecimalItem::RANGE_M999_P999   | DecimalItem::ONE_DECIMAL_PLACE, &displayCalibration },
-  { { 'C', 'y', 'c' }, DecimalItem::RANGE_10_32767    | DecimalItem::ONE_DECIMAL_PLACE, &displayWindow },
+  { { 'C', 'y', 'c' }, DecimalItem::RANGE_0_32767     | DecimalItem::TWO_DECIMAL_PLACES, &displayWindow },
   { { 'M', 'i', 'n' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &lowerTripLimit },
   { { 'M', 'a', 'x' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &upperTripLimit }
 };
@@ -356,10 +354,6 @@ void drawStartupBanner()
   LCDprintln(PcontrollerName);
   LCDsetCursorBottomLeft();
   LCDprintln(Pversion);
-  // initial color swirl code to be deleted later
-  //pinMode(lcdREDPin, OUTPUT);
-  //pinMode(lcdGRNPin, OUTPUT);
-  //pinMode(lcdBLUPin, OUTPUT);
 
 }
 
