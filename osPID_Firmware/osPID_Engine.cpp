@@ -43,7 +43,7 @@ extern void setOutputToManualOutput();
 // as reported on http://www.mstarlabs.com/control/znrule.html
 
 // order must be match enumerated type for auto tune methods
-PROGMEM Tuning tuningRule[PID::NO_OVERSHOOT_PID + 1] =
+Tuning tuningRule[PID::NO_OVERSHOOT_PID + 1] =
 {  
   { {  44, 24,   0 } },  // ZIEGLER_NICHOLS_PI
   { {  34, 40, 160 } },  // ZIEGLER_NICHOLS_PID
@@ -65,7 +65,7 @@ PID::PID(double* Input, double* Output, double* Setpoint,
 {
   // default output limit corresponds to
   // the arduino pwm limits
-  PID::setOutputLimits(0, 255); 
+  //PID::setOutputLimits(0, 100); 
  
   // default Controller Sample Time is 0.1 seconds
   sampleTime = DEFAULT_LOOP_SAMPLE_TIME;

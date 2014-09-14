@@ -10,12 +10,12 @@
  ********************************************/
 
 // the controller name displayed in the startup banner and the identifY response
-static const char CONTROLLER_NAME[] = "  DabPer Enail";
-PROGMEM const char PcontrollerName[] = "  DabPer Enail";
+static const char CONTROLLER_NAME[] = "  DabPer Station";
+PROGMEM const char PcontrollerName[] = "  DabPer Station";
 
 // the version tag displayed in the startup banner and the identifY response
-static const char VERSION_TAG[] = " 710  Prototype";
-PROGMEM const char Pversion[] = " 710  Prototype";
+static const char VERSION_TAG[] = " 710 Edition";
+PROGMEM const char Pversion[] = " 710 Edition";
 
 /********************************************
  *
@@ -36,6 +36,30 @@ static const byte lcdBLUPin    = 11;
 
 //misc LCD shit
 static int  brightness   = 255;
+//LED normalization code to prevent red from overpowering other colors
+//testing code right now uncommenting would result in "swirl" of rgb colors
+// the entire time LCD was "on"
+void setBacklight(uint8_t r, uint8_t g, uint8_t b) {
+  // normalize the red LED - its brighter than the rest!
+  r = map(r, 0, 255, 0, 100);
+  g = map(g, 0, 255, 0, 150);
+ 
+  r = map(r, 0, 255, 0, brightness);
+  g = map(g, 0, 255, 0, brightness);
+  b = map(b, 0, 255, 0, brightness);
+ 
+  // common anode so invert!
+  r = map(r, 0, 255, 255, 0);
+  g = map(g, 0, 255, 255, 0);
+  b = map(b, 0, 255, 255, 0);
+  analogWrite(lcdREDPin, r);
+  analogWrite(lcdGRNPin, g);
+  analogWrite(lcdBLUPin, b);
+ }
+ 
+static int reduserdef;
+static int blueuserdef;
+static int greenuserdef;
 
 
 // pin assignments for input devices 

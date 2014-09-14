@@ -657,7 +657,7 @@ struct SerialCommandParseData
 // two 26-byte arrays separately for the entire upper and lowercase alphabets
 
 // this table must be sorted in ASCII order, that is A-Z then a-z
-PROGMEM SerialCommandParseData commandParseData[] = 
+PROGMEM const SerialCommandParseData commandParseData[] = 
 {
   { 'A', ARGS_ONE_NUMBER | ARGS_FLAG_FIRST_IS_01 | ARGS_FLAG_QUERYABLE },
   { 'B', ARGS_ONE_NUMBER | ARGS_FLAG_QUERYABLE },
