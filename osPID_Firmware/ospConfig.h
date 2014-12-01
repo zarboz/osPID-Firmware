@@ -24,9 +24,9 @@ PROGMEM const char Pversion[] = "v1.0";
  ********************************************/
 
 // pin assignment for LCD display
-static const byte lcdRsPin     = 2; 
+static const byte lcdRsPin     = 8; 
 static const byte lcdEnablePin = 3; 
-static const byte lcdD0Pin     = 7; 
+static const byte lcdD0Pin     = 12; 
 static const byte lcdD1Pin     = 6; 
 static const byte lcdD2Pin     = 5; 
 static const byte lcdD3Pin     = 4;
