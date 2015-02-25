@@ -10,12 +10,12 @@
  ********************************************/
 
 // the controller name displayed in the startup banner and the identifY response
-static const char CONTROLLER_NAME[] = "  DabPer Station";
-PROGMEM const char PcontrollerName[] = "  DabPer Station";
+static const char CONTROLLER_NAME[] = "Temp Controler";
+PROGMEM const char PcontrollerName[] = "Temp Controler";
 
 // the version tag displayed in the startup banner and the identifY response
-static const char VERSION_TAG[] = " 710 Edition";
-PROGMEM const char Pversion[] = " 710 Edition";
+static const char VERSION_TAG[] = "Sparkfun Edition";
+PROGMEM const char Pversion[] = "Sparkfun Edition";
 
 /********************************************
  *
@@ -57,9 +57,6 @@ void setBacklight(uint8_t r, uint8_t g, uint8_t b) {
   analogWrite(lcdBLUPin, b);
  }
  
-static int reduserdef;
-static int blueuserdef;
-static int greenuserdef;
 
 
 // pin assignments for input devices 

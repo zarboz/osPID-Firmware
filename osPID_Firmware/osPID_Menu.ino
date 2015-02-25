@@ -49,10 +49,9 @@ enum
   ITEM_DASHBOARD_MENU,
   ITEM_TUNING_MENU,
   ITEM_CONFIG_MENU,
-  ITEM_COLOR_MENU,
+  ITEM_PROFILE_MENU,
   ITEM_SETPOINT_MENU,
   ITEM_TRIP_MENU,
-  
   
 #if !defined (USE_SIMULATOR)
   ITEM_INPUT_MENU,
@@ -74,17 +73,13 @@ enum
   ITEM_WINDOW_LENGTH,
   ITEM_LOWER_TRIP_LIMIT,
   ITEM_UPPER_TRIP_LIMIT,
-  ITEM_RED_COLOR,
-  ITEM_GREEN_COLOR,
-  ITEM_BLUE_COLOR,
 
   // then generic/specialized items
   FIRST_ACTION_ITEM,
   ITEM_AUTOTUNE_CMD = FIRST_ACTION_ITEM,
-  ITEM_COLOR_LOW,
-  ITEM_COLOR_WARM,
-  ITEM_COLOR_TARGET,
-  ITEM_COLOR_HOT,
+  ITEM_PROFILE1,
+  ITEM_PROFILE2,
+  ITEM_PROFILE3,
 
   ITEM_SETPOINT1,
   ITEM_SETPOINT2,
@@ -113,17 +108,17 @@ enum
   DECIMAL_ITEM_COUNT = FIRST_ACTION_ITEM - FIRST_DECIMAL_ITEM
 };
 
-PROGMEM const byte mainMenuItems[4] = { ITEM_DASHBOARD_MENU, ITEM_TUNING_MENU, ITEM_CONFIG_MENU, ITEM_COLOR_MENU};
-PROGMEM const byte dashMenuItems[4] = { ITEM_SETPOINT, ITEM_INPUT, ITEM_OUTPUT, ITEM_PID_MODE};
+PROGMEM const byte mainMenuItems[4] = { ITEM_DASHBOARD_MENU, ITEM_TUNING_MENU, ITEM_CONFIG_MENU, ITEM_PROFILE_MENU };
+PROGMEM const byte dashMenuItems[5] = { ITEM_SETPOINT, ITEM_INPUT, ITEM_OUTPUT, ITEM_PID_MODE, ITEM_TRIP_MENU };
 PROGMEM const byte tuneMenuItems[5] = { ITEM_KP, ITEM_KI, ITEM_KD, ITEM_PID_DIRECTION, ITEM_AUTOTUNE_CMD };
 
 #if !defined (USE_SIMULATOR)
-PROGMEM const byte configMenuItems[6] = { ITEM_INPUT_MENU, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU, ITEM_COLOR_MENU};
+PROGMEM const byte configMenuItems[5] = { ITEM_INPUT_MENU, ITEM_CALIBRATION, ITEM_WINDOW_LENGTH, ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU };
 #else
 PROGMEM const byte configMenuItems[2] = { ITEM_POWERON_MENU, ITEM_RESET_ROM_MENU };
 #endif 
   
-PROGMEM const byte colormenuItems[3] = { ITEM_RED_COLOR, ITEM_GREEN_COLOR, ITEM_BLUE_COLOR };
+PROGMEM const byte profileMenuItems[3] = { ITEM_PROFILE1, ITEM_PROFILE2, ITEM_PROFILE3 };
 PROGMEM const byte setpointMenuItems[4] = { ITEM_SETPOINT1, ITEM_SETPOINT2, ITEM_SETPOINT3, ITEM_SETPOINT4 };
 
 #if !defined (USE_SIMULATOR)
@@ -136,9 +131,6 @@ PROGMEM const byte poweronMenuItems[3]  = { ITEM_POWERON_DISABLE, ITEM_POWERON_C
 PROGMEM const byte tripMenuItems[4]     = { ITEM_TRIP_ENABLED, ITEM_LOWER_TRIP_LIMIT, ITEM_UPPER_TRIP_LIMIT, ITEM_TRIP_AUTORESET };
 PROGMEM const byte resetRomMenuItems[2] = { ITEM_RESET_ROM_NO, ITEM_RESET_ROM_YES };
 PROGMEM const byte temperatureItems[4]  = { ITEM_SETPOINT, ITEM_INPUT, ITEM_LOWER_TRIP_LIMIT, ITEM_UPPER_TRIP_LIMIT };
-//PROGMEM const byte colormenuItems[4]    = { ITEM_COLOR_LOW,ITEM_COLOR_WARM,ITEM_COLOR_TARGET,ITEM_COLOR_HOT };
-//PROGMEM const byte actualcolor[3]       = { ITEM_RED_COLOR, ITEM_GREEN_COLOR, ITEM_BLUE_COLOR};
-
 
 // This must be in the same order as the ITEM_*_MENU enumeration values
 PROGMEM const MenuItem menuData[MENU_COUNT + 1] =
@@ -147,7 +139,7 @@ PROGMEM const MenuItem menuData[MENU_COUNT + 1] =
   { sizeof(dashMenuItems),     0,                    dashMenuItems       } ,
   { sizeof(tuneMenuItems),     0,                    tuneMenuItems       } ,
   { sizeof(configMenuItems),   0,                    configMenuItems     } ,
-  { sizeof(colormenuItems),  0,                      colormenuItems    } ,
+  { sizeof(profileMenuItems),  0,                    profileMenuItems    } ,
   { sizeof(setpointMenuItems), MENU_FLAG_2x2_FORMAT, setpointMenuItems   } ,
   { sizeof(tripMenuItems),     0,                    tripMenuItems       } ,
   
@@ -180,8 +172,7 @@ struct DecimalItem
     RANGE_10_32767 = 0x10,
     RANGE_M999_P999 = 0x20,
     NO_EDIT = 0x40,
-    EDIT_MANUAL_ONLY = 0x80,
-    RANGE_0_255 = 0x100
+    EDIT_MANUAL_ONLY = 0x80
   };
 
   byte flags() const 
@@ -210,7 +201,7 @@ struct DecimalItem
     {
       return 10;
     }
-    if (f & (RANGE_0_1000 | RANGE_0_32767 | RANGE_0_255))
+    if (f & (RANGE_0_1000 | RANGE_0_32767))
     {
       return 0;
     }
@@ -218,7 +209,6 @@ struct DecimalItem
     {
       return -999;
     }
-    else
     return -9999;
   }
 
@@ -237,11 +227,6 @@ struct DecimalItem
     {
       return 9999;
     }
-    if (f & (RANGE_0_255))
-    {
-      return 255;
-    }
-    else
     return 9999;
   }
 
@@ -280,13 +265,9 @@ PROGMEM const DecimalItem decimalItemData[DECIMAL_ITEM_COUNT] =
   { { 'I', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &IGain },
   { { 'D', ' ', ' ' }, DecimalItem::RANGE_0_32767     | DecimalItem::THREE_DECIMAL_PLACES, &DGain },
   { { 'C', 'a', 'l' }, DecimalItem::RANGE_M999_P999   | DecimalItem::ONE_DECIMAL_PLACE, &displayCalibration },
-  { { 'C', 'y', 'c' }, DecimalItem::RANGE_10_32767     | DecimalItem::ONE_DECIMAL_PLACE, &displayWindow },
+  { { 'C', 'y', 'c' }, DecimalItem::RANGE_0_32767     | DecimalItem::TWO_DECIMAL_PLACES, &displayWindow },
   { { 'M', 'i', 'n' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &lowerTripLimit },
-  { { 'M', 'a', 'x' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &upperTripLimit },
-  { { 'R', 'e', 'd' }, DecimalItem::RANGE_0_255       | DecimalItem::ONE_DECIMAL_PLACE, &reduserdef },
-  { { 'G', 'r', 'n' }, DecimalItem::RANGE_0_255       | DecimalItem::ONE_DECIMAL_PLACE, &greenuserdef},
-  { { 'B', 'l', 'u' }, DecimalItem::RANGE_0_255       | DecimalItem::ONE_DECIMAL_PLACE, &blueuserdef},
-  
+  { { 'M', 'a', 'x' }, DecimalItem::RANGE_M9999_P9999 | DecimalItem::ONE_DECIMAL_PLACE, &upperTripLimit }
 };
 
 struct MenuStateData 
@@ -340,7 +321,6 @@ static void __attribute__ ((noinline)) LCDsetCursorBottomLeft()
 {
   lcd.setCursor(0, 1);
 }
-
 
 // draw the initial startup banner
 void drawStartupBanner()
@@ -614,10 +594,17 @@ static void drawFullRowItem(byte row, bool selected, byte item)
   case ITEM_CONFIG_MENU:
     LCDprintln(PSTR("Config"));
     break;
-  case ITEM_COLOR_MENU:
-    LCDprintln(PSTR("Color Select"));
+  case ITEM_PROFILE_MENU:
+    if (runningProfile)
+    {
+      LCDprintln(PSTR("Cancel"));
+    }
+    else
+    {
+      drawProfileName(activeProfileIndex);
+    }
     break;
-  case ITEM_SETPOINT_MENU: 
+    // case ITEM_SETPOINT_MENU: should not happen
   case ITEM_POWERON_MENU:
     LCDprintln(PSTR("Power On"));
     break;
@@ -630,6 +617,7 @@ static void drawFullRowItem(byte row, bool selected, byte item)
     LCDprintln(PSTR("Sensor"));
     break;
 #endif
+    
   case ITEM_RESET_ROM_MENU:
     LCDprintln(PSTR("Reset Memory"));
     break;
@@ -643,10 +631,15 @@ static void drawFullRowItem(byte row, bool selected, byte item)
       LCDprintln(PSTR("Auto Tuning"));
     }
     break;
-    case ITEM_SETPOINT1:
-    case ITEM_SETPOINT2:
-    case ITEM_SETPOINT3:
-    case ITEM_SETPOINT4:
+  case ITEM_PROFILE1:
+  case ITEM_PROFILE2:
+  case ITEM_PROFILE3:
+    drawProfileName(item - ITEM_PROFILE1);
+    break;
+    //case ITEM_SETPOINT1:
+    //case ITEM_SETPOINT2:
+    //case ITEM_SETPOINT3:
+    //case ITEM_SETPOINT4: should not happen
   case ITEM_PID_MODE:
     if (myPID.getMode() == PID::MANUAL)
     {
@@ -875,7 +868,7 @@ void backKeyPress()
   case ITEM_DASHBOARD_MENU:
   case ITEM_TUNING_MENU:
   case ITEM_CONFIG_MENU:
-  case ITEM_COLOR_MENU:
+  case ITEM_PROFILE_MENU:
     menuState.currentMenu = ITEM_MAIN_MENU;
     menuState.highlightedItemMenuIndex = prevMenu - ITEM_DASHBOARD_MENU;
     menuState.firstItemMenuIndex = prevMenu - ITEM_DASHBOARD_MENU;
@@ -1080,11 +1073,27 @@ void okKeyPress()
 
   if (item < FIRST_DECIMAL_ITEM)
   {
+    // the profile menu is special: a short-press on it triggers the
+    // profile or cancels one that's in progress
+    if (item == ITEM_PROFILE_MENU)
+    {
+      if (runningProfile)
+      {
+        stopProfile();
+      }
+      else if (!myPID.isTuning)
+      {
+        startProfile();
+      }
+      return;
+    }
+
     // it's a menu: open that menu
     menuState.currentMenu = item;
     switch (item)
     {
-    case ITEM_COLOR_MENU:
+    case ITEM_PROFILE_MENU:
+      menuState.highlightedItemMenuIndex = activeProfileIndex;
       break;
     case ITEM_SETPOINT_MENU:
       menuState.highlightedItemMenuIndex = setPointIndex;
@@ -1142,14 +1151,14 @@ void okKeyPress()
     }
     break;
 
-  //case ITEM_PROFILE1:
-  //case ITEM_PROFILE2:
- // case ITEM_PROFILE3:
-  //  activeProfileIndex = item - ITEM_PROFILE1;
- //   if (!myPID.isTuning)
-  //  {
- //     startProfile();
- //   }
+  case ITEM_PROFILE1:
+  case ITEM_PROFILE2:
+  case ITEM_PROFILE3:
+    activeProfileIndex = item - ITEM_PROFILE1;
+    if (!myPID.isTuning)
+    {
+      startProfile();
+    }
     markSettingsDirty();
 
     // return to the prior menu
@@ -1245,10 +1254,12 @@ bool okKeyLongPress()
     menuState.firstItemMenuIndex = 0;
     menuState.highlightedItemMenuIndex = setPointIndex;
   }
-  else if (item == ITEM_COLOR_MENU)
+  else if (item == ITEM_PROFILE_MENU)
   {
     // open the profile menu
-    menuState.currentMenu = ITEM_COLOR_MENU;
+    menuState.currentMenu = ITEM_PROFILE_MENU;
+    menuState.highlightedItemMenuIndex = activeProfileIndex;
+    menuState.firstItemMenuIndex = (activeProfileIndex == 0 ? 0 : 1);
   }
   else
     return false;
